@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package protocol;
 
-service CertIssuer {
+service IssuingService {
     rpc IssueBlockchainCertificate (IssueBlockchainCertificateRequest) returns (IssueBlockchainCertificateReply) {}
 }
 

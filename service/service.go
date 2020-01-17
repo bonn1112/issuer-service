@@ -7,10 +7,10 @@ import (
 	"github.com/lastrust/issuing-service/protocol"
 )
 
-type certIssuerService struct{}
+type issuingService struct{}
 
 // IssueBlockchainCertificate run the command of pkg/cert-issuer, returns an error if is not success
-func (c certIssuerService) IssueBlockchainCertificate(ctx context.Context, req *protocol.IssueBlockchainCertificateRequest) (*protocol.IssueBlockchainCertificateReply, error) {
+func (s issuingService) IssueBlockchainCertificate(ctx context.Context, req *protocol.IssueBlockchainCertificateRequest) (*protocol.IssueBlockchainCertificateReply, error) {
 	cli := certissuer.New(req.Issuer, req.Filename)
 
 	err := cli.IssueCertificate()
@@ -21,7 +21,7 @@ func (c certIssuerService) IssueBlockchainCertificate(ctx context.Context, req *
 	return &protocol.IssueBlockchainCertificateReply{}, nil
 }
 
-// New certIssuerService constructor
-func New() protocol.CertIssuerServer {
-	return &certIssuerService{}
+// New issuingService constructor
+func New() protocol.IssuingServiceServer {
+	return &issuingService{}
 }

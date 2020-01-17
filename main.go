@@ -21,7 +21,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	protocol.RegisterCertIssuerServer(s, service.New())
+	protocol.RegisterIssuingServiceServer(s, service.New())
 
 	if os.Getenv("PROCESS_ENV") == "dev" {
 		logrus.Info("reflection GRPC is registered")
