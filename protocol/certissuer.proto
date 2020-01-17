@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package protocol;
+
+service CertIssuer {
+    rpc IssueBlockchainCertificate (IssueBlockchainCertificateRequest) returns (IssueBlockchainCertificateReply) {}
+}
+
+message IssueBlockchainCertificateRequest {
+    string Issuer = 1;
+    string Filename = 2;
+}
+
+message IssueBlockchainCertificateReply{}
