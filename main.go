@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"log"
 	"net"
 	"os"
@@ -16,11 +15,6 @@ import (
 const addr = ":8082"
 
 func main() {
-	privateKey := os.Getenv("BLOCKCHAIN_PRIVATE_KEY")
-	if privateKey == "" {
-		logrus.Fatal(errors.New("private key couldn't be empty string"))
-	}
-
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
