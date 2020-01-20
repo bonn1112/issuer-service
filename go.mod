@@ -3,7 +3,6 @@ module github.com/lastrust/issuing-service
 go 1.13
 
 require (
-	github.com/art-es/blockcerts-demo/services/cert-issuer v0.0.0-20200117055106-d6228eaa9316 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7 // indirect
@@ -18,4 +17,6 @@ require (
 	github.com/valyala/fasttemplate v1.1.0 // indirect
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad // indirect
 	google.golang.org/grpc v1.26.0
+	gopkg.in/urfave/cli.v2 v2.0.0-20190806201727-b62605953717 // indirect
+	gopkg.in/yaml.v2 v2.2.7 // indirect
 )
