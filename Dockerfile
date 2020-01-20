@@ -20,6 +20,7 @@ RUN apk add --update \
         python3 \
         python3-dev \
         tar \
+        git \
         go \
     && python3 -m ensurepip \
     && pip3 install --upgrade pip setuptools \
