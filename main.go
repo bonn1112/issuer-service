@@ -28,6 +28,7 @@ func main() {
 		reflection.Register(s)
 	}
 
+	logrus.Printf("Listening and serving GRPC on %s\n", addr)
 	if err = s.Serve(lis); err != nil {
 		logrus.Fatalf("failed to serve: %v", err)
 	}

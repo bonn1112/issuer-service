@@ -8,6 +8,7 @@ schema:
     commands:
       run:
         status: true
+        method: /go/bin/issuing-service
     watcher:
       extensions:
         - go
