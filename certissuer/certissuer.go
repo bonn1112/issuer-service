@@ -2,11 +2,14 @@ package certissuer
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 
 	"github.com/lastrust/issuing-service/utils"
 )
+
+const defaultCertIssuerExecutable = "/usr/bin/cert-issuer"
 
 // A CertIssuer for issuing the blockchain certificates
 type CertIssuer interface {
@@ -18,6 +21,8 @@ type CertIssuer interface {
 type certIssuer struct {
 	issuer   string
 	filename string
+
+	certIssuerExecutable string
 }
 
 func (i *certIssuer) IssueCertificate() error {
@@ -30,7 +35,13 @@ func (i *certIssuer) IssueCertificate() error {
 		return errors.New("configuration file is not exists")
 	}
 
-	_, err := exec.Command("env", "CONF_PATH="+fp, "make").Output()
+	cmd := exec.Command(
+		"make", "issue",
+		"CONF_PATH="+fp,
+	)
+	out, err := cmd.Output()
+	fmt.Println("COMMAND:", cmd.String())
+	fmt.Println("OUTPUT:", string(out))
 	if err != nil {
 		return err
 	}
@@ -43,5 +54,10 @@ func (i *certIssuer) IssueCertificate() error {
 
 // New a certIssuer constructor
 func New(issuer, fn string) CertIssuer {
-	return &certIssuer{issuer, fn}
+	certIssuerExecutable := os.Getenv("CERT_ISSUER_EXECUTABLE")
+	if certIssuerExecutable == "" {
+		certIssuerExecutable = defaultCertIssuerExecutable
+	}
+
+	return &certIssuer{issuer, fn, certIssuerExecutable}
 }
