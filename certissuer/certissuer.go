@@ -2,7 +2,6 @@ package certissuer
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 
@@ -35,13 +34,10 @@ func (i *certIssuer) IssueCertificate() error {
 		return errors.New("configuration file is not exists")
 	}
 
-	cmd := exec.Command(
+	_, err := exec.Command(
 		"make", "issue",
 		"CONF_PATH="+fp,
-	)
-	out, err := cmd.Output()
-	fmt.Println("COMMAND:", cmd.String())
-	fmt.Println("OUTPUT:", string(out))
+	).Output()
 	if err != nil {
 		return err
 	}
