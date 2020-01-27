@@ -10,6 +10,11 @@ import (
 
 const defaultCertIssuerExecutable = "/usr/bin/cert-issuer"
 
+var (
+	errFilenameIsEmpty = errors.New("filename couldn't be empty")
+	errConfigNotExists = errors.New("configuration file is not exists")
+)
+
 // A CertIssuer for issuing the blockchain certificates
 type CertIssuer interface {
 	// IssueCertificate using the unsigned certificate with configuration file
@@ -26,12 +31,12 @@ type certIssuer struct {
 
 func (i *certIssuer) IssueCertificate() error {
 	if i.filename == "" {
-		return errors.New("filename couldn't be empty")
+		return errFilenameIsEmpty
 	}
 
 	fp := i.configsFilepath()
 	if !utils.FileExists(fp) {
-		return errors.New("configuration file is not exists")
+		return errConfigNotExists
 	}
 
 	_, err := exec.Command(
