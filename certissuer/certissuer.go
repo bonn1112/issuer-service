@@ -8,8 +8,6 @@ import (
 	"github.com/lastrust/issuing-service/utils"
 )
 
-const defaultCertIssuerExecutable = "/usr/bin/cert-issuer"
-
 var (
 	errFilenameIsEmpty = errors.New("filename couldn't be empty")
 	errConfigNotExists = errors.New("configuration file is not exists")
@@ -25,8 +23,6 @@ type CertIssuer interface {
 type certIssuer struct {
 	issuer   string
 	filename string
-
-	certIssuerExecutable string
 }
 
 func (i *certIssuer) IssueCertificate() error {
@@ -55,10 +51,5 @@ func (i *certIssuer) IssueCertificate() error {
 
 // New a certIssuer constructor
 func New(issuer, fn string) CertIssuer {
-	certIssuerExecutable := os.Getenv("CERT_ISSUER_EXECUTABLE")
-	if certIssuerExecutable == "" {
-		certIssuerExecutable = defaultCertIssuerExecutable
-	}
-
-	return &certIssuer{issuer, fn, certIssuerExecutable}
+	return &certIssuer{issuer, fn}
 }
