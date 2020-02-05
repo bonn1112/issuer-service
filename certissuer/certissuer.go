@@ -35,10 +35,7 @@ func (i *certIssuer) IssueCertificate() error {
 		return errConfigNotExists
 	}
 
-	_, err := exec.Command(
-		"make", "issue",
-		"CONF_PATH="+fp,
-	).Output()
+	_, err := CmdIssue(fp).Output()
 	if err != nil {
 		return err
 	}
@@ -52,4 +49,11 @@ func (i *certIssuer) IssueCertificate() error {
 // New a certIssuer constructor
 func New(issuer, fn string) CertIssuer {
 	return &certIssuer{issuer, fn}
+}
+
+func CmdIssue(fp string) *exec.Cmd {
+	return exec.Command(
+		"make", "issue",
+		"CONF_PATH="+fp,
+	)
 }
