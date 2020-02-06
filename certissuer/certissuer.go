@@ -35,7 +35,7 @@ func (i *certIssuer) IssueCertificate() error {
 		return errConfigNotExists
 	}
 
-	_, err := CmdIssue(fp).Output()
+	_, err := cmdIssue(fp).Output()
 	if err != nil {
 		return err
 	}
@@ -51,9 +51,14 @@ func New(issuer, fn string) CertIssuer {
 	return &certIssuer{issuer, fn}
 }
 
-func CmdIssue(fp string) *exec.Cmd {
+func cmdIssue(fp string) *exec.Cmd {
+	makefileDir := os.Getenv("ISSUING_SERVICE_DIR")
+	if makefileDir == "" {
+		makefileDir = "."
+	}
+
 	return exec.Command(
-		"make", "issue",
+		"make", "-C", makefileDir, "issue",
 		"CONF_PATH="+fp,
 	)
 }

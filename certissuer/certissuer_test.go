@@ -1,6 +1,8 @@
 package certissuer
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -19,6 +21,25 @@ func TestCertIssuer_errConfigNotExists(t *testing.T) {
 	err := New("test-issuer", "file_undefined").IssueCertificate()
 	assert.NotNil(t, err)
 	assert.Equal(t, errConfigNotExists.Error(), err.Error())
+}
+
+func TestCmdIssue(t *testing.T) {
+	_ = os.Setenv("APP_ENV", "test")
+
+	const (
+		makefileDir  = ".."
+		testFilepath = "/path/to/test/file/"
+	)
+
+	os.Setenv("ISSUING_SERVICE_DIR", makefileDir)
+	cmd := cmdIssue(testFilepath)
+
+	assert.Equal(t, cmd.String(), fmt.Sprintf("/usr/bin/make -C %s issue CONF_PATH=%s", makefileDir, testFilepath))
+
+	out, err := cmd.Output()
+
+	assert.Nil(t, err)
+	assert.Equal(t, string(out), fmt.Sprintf("/usr/bin/cert-issuer -c %s\n", testFilepath))
 }
 
 func initTestPaths() error {
