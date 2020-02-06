@@ -7,6 +7,3 @@ issue:
 	fi
 
 .DEFAULT_GOAL := issue
-
-qwe:
-	@echo "qwe"
