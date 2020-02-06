@@ -1,5 +1,9 @@
 .PHONY: issue
 issue:
-	/usr/bin/cert-issuer -c "${CONF_PATH}"
+	@if [ "${APP_ENV}" = "test" ]; then\
+		echo "/usr/bin/cert-issuer -c ${CONF_PATH}";\
+	else\
+		/usr/bin/cert-issuer -c "${CONF_PATH}";\
+	fi
 
 .DEFAULT_GOAL := issue

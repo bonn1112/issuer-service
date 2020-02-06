@@ -1,6 +1,6 @@
 package certissuer
 
-const dataDir = "/storage/data/"
+var dataDir = "/storage/data/"
 
 func (i *certIssuer) configsFilepath() string {
 	return dataDir + i.issuer + "/configs/" + i.filename + ".ini"

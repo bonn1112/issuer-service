@@ -8,6 +8,11 @@ import (
 	"github.com/lastrust/issuing-service/utils"
 )
 
+var (
+	errFilenameIsEmpty = errors.New("filename couldn't be empty")
+	errConfigNotExists = errors.New("configuration file is not exists")
+)
+
 // A CertIssuer for issuing the blockchain certificates
 type CertIssuer interface {
 	// IssueCertificate using the unsigned certificate with configuration file
@@ -22,15 +27,15 @@ type certIssuer struct {
 
 func (i *certIssuer) IssueCertificate() error {
 	if i.filename == "" {
-		return errors.New("filename couldn't be empty")
+		return errFilenameIsEmpty
 	}
 
 	fp := i.configsFilepath()
 	if !utils.FileExists(fp) {
-		return errors.New("configuration file is not exists")
+		return errConfigNotExists
 	}
 
-	_, err := exec.Command("env", "CONF_PATH="+fp, "make").Output()
+	_, err := CmdIssue(fp).Output()
 	if err != nil {
 		return err
 	}
@@ -44,4 +49,11 @@ func (i *certIssuer) IssueCertificate() error {
 // New a certIssuer constructor
 func New(issuer, fn string) CertIssuer {
 	return &certIssuer{issuer, fn}
+}
+
+func CmdIssue(fp string) *exec.Cmd {
+	return exec.Command(
+		"make", "issue",
+		"CONF_PATH="+fp,
+	)
 }
