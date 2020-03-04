@@ -2,8 +2,8 @@ FROM seegno/bitcoind:0.13-alpine as cli
 
 ENV GOLANG_VERSION 1.13.6
 
-COPY ./pkg/cert-issuer /cert-issuer-cli
-COPY ./pkg/cert-issuer/conf_regtest.ini /etc/cert-issuer/conf.ini
+COPY ./issuing-service/pkg/cert-issuer /cert-issuer-cli
+COPY ./issuing-service/pkg/cert-issuer/conf_regtest.ini /etc/cert-issuer/conf.ini
 
 RUN apk add --update \
         bash \
