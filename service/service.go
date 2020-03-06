@@ -5,6 +5,7 @@ import (
 
 	"github.com/lastrust/issuing-service/certissuer"
 	"github.com/lastrust/issuing-service/protocol"
+	"github.com/sirupsen/logrus"
 )
 
 type issuingService struct{}
@@ -15,6 +16,7 @@ func (s issuingService) IssueBlockchainCertificate(ctx context.Context, req *pro
 
 	err := cli.IssueCertificate()
 	if err != nil {
+		logrus.WithError(err).Error("failed certissuer.IssueCertificate")
 		return nil, err
 	}
 
