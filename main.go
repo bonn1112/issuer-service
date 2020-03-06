@@ -2,8 +2,10 @@ package main
 
 import (
 	"net"
-	"os"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
+	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/lastrust/issuing-service/config"
 	"github.com/lastrust/issuing-service/protocol"
 	"github.com/lastrust/issuing-service/service"
@@ -12,46 +14,49 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-var logFile *os.File
-
 func main() {
 	conf, err := config.Env()
 	if err != nil {
 		logrus.WithError(err).Fatalln("invalid configuration")
 	}
-	configureLogger(conf.LogFilename)
 
 	lis, err := net.Listen("tcp", conf.Addr)
 	if err != nil {
 		logrus.WithError(err).Fatalln("failed to listen")
 	}
 
-	s := grpc.NewServer()
-	protocol.RegisterIssuingServiceServer(s, service.New())
+	logOpts := configureLogger(conf.LogLevel)
+
+	srv := grpc.NewServer(logOpts...)
+	protocol.RegisterIssuingServiceServer(srv, service.New())
 
 	if conf.ProcessEnv == "dev" {
 		logrus.Info("reflection GRPC is registered")
-		reflection.Register(s)
+		reflection.Register(srv)
 	}
 
-	logrus.Printf("Listening and serving GRPC on %s\n", conf.Addr)
-	if err = s.Serve(lis); err != nil {
+	logrus.Printf("Listening and serving GRPC on %srv\n", conf.Addr)
+	if err = srv.Serve(lis); err != nil {
 		logrus.WithError(err).Fatalln("failed to serve")
 	}
 }
 
-func configureLogger(logFilename string) {
-	if logFilename == "" {
-		logrus.Warn("logging filename is empty")
-		return
-	}
-
-	var err error
-	logFile, err = os.OpenFile(logFilename, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0755)
+func configureLogger(logLevelString string) []grpc.ServerOption {
+	logLevel, err := logrus.ParseLevel(logLevelString)
 	if err != nil {
-		logrus.WithError(err).Fatalln("error opening log file")
-		return
+		logrus.WithError(err).Fatalln("failed parse log level")
 	}
+	logrus.Printf("Log level: %d %s", logLevel, logLevelString)
 
-	logrus.SetOutput(logFile)
+	logger := logrus.New()
+	logger.Level = logLevel
+
+	return []grpc.ServerOption{
+		grpc_middleware.WithStreamServerChain(
+			grpc_ctxtags.StreamServerInterceptor(),
+			grpc_logrus.StreamServerInterceptor(logrus.NewEntry(logger))),
+		grpc_middleware.WithUnaryServerChain(
+			grpc_ctxtags.UnaryServerInterceptor(),
+			grpc_logrus.UnaryServerInterceptor(logrus.NewEntry(logger))),
+	}
 }

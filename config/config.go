@@ -5,9 +5,9 @@ import (
 )
 
 type Config struct {
-	ProcessEnv  string `envconfig:"ISSUINGSERVICE_PROCESS_ENV"`
-	Addr        string `envconfig:"ISSUINGSERVICE_SERVER_ADDR"`
-	LogFilename string `envconfig:"ISSUINGSERVICE_LOGS_FILENAME"`
+	ProcessEnv string `envconfig:"ISSUINGSERVICE_PROCESS_ENV"`
+	Addr       string `envconfig:"ISSUINGSERVICE_SERVER_ADDR"`
+	LogLevel   string `envconfig:"ISSUINGSERVICE_LOGS_LEVEL"`
 }
 
 // Env returns the settings from the environment
@@ -25,8 +25,8 @@ func Env() (conf Config, err error) {
 		conf.Addr = ":8082"
 	}
 
-	if conf.LogFilename == "" {
-		conf.LogFilename = "issuing_service.log"
+	if conf.LogLevel == "" {
+		conf.LogLevel = "info"
 	}
 
 	return
