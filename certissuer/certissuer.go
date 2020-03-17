@@ -4,7 +4,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
-
+	"path/filepath"
 	"github.com/lastrust/issuing-service/utils"
 )
 
@@ -25,18 +25,26 @@ func (i *certIssuer) IssueCertificate() error {
 		return errors.New("filename couldn't be empty")
 	}
 
-	fp := i.configsFilepath()
-	if !utils.FileExists(fp) {
+	confPath := i.configsFilepath()
+	defer os.Remove(confPath)
+
+	if !utils.FileExists(confPath) {
 		return errors.New("configuration file is not exists")
 	}
 
-	_, err := exec.Command("env", "CONF_PATH="+fp, "make").Output()
+	_, err := exec.Command("env", "CONF_PATH="+confPath, "make").Output()
 	if err != nil {
 		return err
 	}
+	defer func() {
+		os.RemoveAll(i.unsignedCertificatesDir())
+		os.RemoveAll(i.blockchainCertificatesDir())
+	}
 
-	os.Remove(fp)
-	os.RemoveAll(i.unsignedCertificatesDir() + i.filename)
+	err := storeAllCerts(i.blockchainCertificatesDir())
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -44,4 +52,22 @@ func (i *certIssuer) IssueCertificate() error {
 // New a certIssuer constructor
 func New(issuer, fn string) CertIssuer {
 	return &certIssuer{issuer, fn}
+}
+
+func storeAllCerts(dir string) error {
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		err := storeGCS(path)
+		if err != nil {
+			return err
+		}
+	})
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
