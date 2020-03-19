@@ -1,8 +1,4 @@
-# Build
-FROM golang:1.13.6-alpine3.10 as builder
-COPY . /app
-WORKDIR /app
-RUN go build -o /main /app/main.go
+FROM seegno/bitcoind:0.13-alpine as cli
 
 # Make blockchain env
 FROM alpine:3.10 as cli
@@ -10,6 +6,9 @@ FROM alpine:3.10 as cli
 COPY ./pkg/cert-issuer /cert-issuer-cli
 COPY ./pkg/cert-issuer/conf_regtest.ini /etc/cert-issuer/conf.ini
 
+
+
+# installation common packages & cert-issuer cli
 RUN apk add --update \
         bash \
         ca-certificates \
@@ -25,6 +24,8 @@ RUN apk add --update \
         python3 \
         python3-dev \
         tar \
+        git \
+        go \
     && python3 -m ensurepip \
     && pip3 install --upgrade pip setuptools \
     && mkdir -p /etc/cert-issuer/data/unsigned_certificates \
@@ -35,7 +36,53 @@ RUN apk add --update \
     && rm -rf /root/.cache \
     && sed -i.bak s/==1\.0b1/\>=1\.0\.2/g /usr/lib/python3.*/site-packages/merkletools-1.0.2-py3.*.egg-info/requires.txt
 
-# Run
+CMD bitcoind -daemon && bash
+
+
+
+# Golang Dockerfile
+
+RUN export \
+		GOOS="$(go env GOOS)" \
+		GOARCH="$(go env GOARCH)" \
+		GOHOSTOS="$(go env GOHOSTOS)" \
+		GOHOSTARCH="$(go env GOHOSTARCH)" \
+	; \
+	apkArch="$(apk --print-arch)"; \
+		case "$apkArch" in \
+			armhf) export GOARM='6' ;; \
+			armv7) export GOARM='7' ;; \
+			x86) export GO386='387' ;; \
+		esac; \
+		\
+		wget -O go.tgz "https://golang.org/dl/go$GOLANG_VERSION.src.tar.gz"; \
+		echo 'aae5be954bdc40bcf8006eb77e8d8a5dde412722bc8effcdaf9772620d06420c *go.tgz' | sha256sum -c -; \
+		tar -C /usr/local -xzf go.tgz; \
+		rm go.tgz; \
+		\
+		cd /usr/local/go/src; \
+		./make.bash; \
+		\
+		rm -rf \
+			/usr/local/go/pkg/bootstrap \
+			/usr/local/go/pkg/obj \
+		; \
+		apk del .build-deps; \
+		\
+		export PATH="/usr/local/go/bin:$PATH"; \
+		go version
+
+ENV GOPATH /go
+ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
+
+RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
+
+
+
+# Base logic
+
+ADD ./storage /storage
+
 WORKDIR /cert-issuer-cli
 RUN python3 setup.py experimental --blockchain=ethereum
 
@@ -43,4 +90,6 @@ WORKDIR /app
 COPY ./Makefile .
 COPY --from=builder /main .
 
-CMD [ "./main" ]
+RUN go get github.com/oxequa/realize
+
+CMD [ "realize", "start" ]
