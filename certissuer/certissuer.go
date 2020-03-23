@@ -2,10 +2,10 @@ package certissuer
 
 import (
 	"errors"
+	"github.com/lastrust/issuing-service/utils"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"github.com/lastrust/issuing-service/utils"
 )
 
 // A CertIssuer for issuing the blockchain certificates
@@ -39,9 +39,9 @@ func (i *certIssuer) IssueCertificate() error {
 	defer func() {
 		os.RemoveAll(i.unsignedCertificatesDir())
 		os.RemoveAll(i.blockchainCertificatesDir())
-	}
+	}()
 
-	err := storeAllCerts(i.blockchainCertificatesDir())
+	err = i.storeAllCerts(i.blockchainCertificatesDir())
 	if err != nil {
 		return err
 	}
@@ -54,16 +54,18 @@ func New(issuer, fn string) CertIssuer {
 	return &certIssuer{issuer, fn}
 }
 
-func storeAllCerts(dir string) error {
+func (i *certIssuer) storeAllCerts(dir string) error {
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-
-		err := storeGCS(path)
-		if err != nil {
-			return err
+		if !info.IsDir() {
+			err = i.storeGCS(path)
+			if err != nil {
+				return err
+			}
 		}
+		return nil
 	})
 
 	if err != nil {

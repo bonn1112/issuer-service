@@ -22,7 +22,7 @@ func Env() (conf Config, err error) {
 	}
 
 	if conf.Addr == "" {
-		conf.Addr = ":8082"
+		conf.Addr = ":8080"
 	}
 
 	if conf.LogLevel == "" {

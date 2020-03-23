@@ -2,27 +2,38 @@ package certissuer
 
 import (
 	"context"
+	"errors"
+	"io"
+	"os"
+	"time"
 
 	"github.com/lastrust/issuing-service/config"
 
 	"cloud.google.com/go/storage"
-	"io/ioutil"
-
 )
 
-func getGCSClient() (client *Client, bucket string, err error) {
-	var bucket string
-
+func getBucket() (string, error) {
 	conf, err := config.Env()
 	if err != nil {
-		return nil, nil, err
+		return "", err
 	}
-	if conf.ProcessEnv == "dev" || conf.ProcessEnv == "stg" {
-		bucket = "lastrust-stg"
-	} else if conf.ProcessEnv == "prd" {
-		bucket = "lastrust-prd"
-	} else {
-		return nil, nil, errors.New("Invalid PROCESS_ENV")
+
+	switch conf.ProcessEnv {
+	case "dev":
+		return "lst-issuer-dev", nil
+	case "stg":
+		return "lst-issuer-stg", nil
+	case "prd":
+		return "lst-issuer-prd", nil
+	default:
+		return "", errors.New("Invalid PROCESS_ENV")
+	}
+}
+
+func (i *certIssuer) storeGCS(filepath string) (err error) {
+	bucket, err := getBucket()
+	if err != nil {
+		return err
 	}
 
 	ctx := context.Background()
@@ -30,30 +41,17 @@ func getGCSClient() (client *Client, bucket string, err error) {
 	defer cancel()
 
 	client, err := storage.NewClient(ctx)
-	if err != {
-		return nil, nil, err
-	}
-
-	return client, bucket, nil
-}
-
-func storeGCS(filepath string) (err error) {
-	client, bucket, err = getGCSClient()
-	if err != nil {
-		return nil, err
-	}
-	w, err := client.Bucket(bucket).Object(object).NewWriter(ctx)
-	if err != nil {
-			return nil, err
-	}
-	defer w.Close()
-
-	f, err := os.Open(filepath)
-	_, err = io.Copy(wc, f)
 	if err != nil {
 		return err
 	}
-	err := wc.Close(
+
+	w := client.Bucket(bucket).Object(i.certsPathInGCS()).NewWriter(ctx)
+	f, err := os.Open(filepath)
+	_, err = io.Copy(w, f)
+	if err != nil {
+		return err
+	}
+	err = w.Close()
 	if err != nil {
 		return err
 	}
