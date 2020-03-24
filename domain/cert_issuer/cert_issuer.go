@@ -1,12 +1,26 @@
 package cert_issuer
 
 import (
+	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
+
+	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
+	"github.com/lastrust/issuing-service/utils"
 	"path/filepath"
 
 	"github.com/lastrust/issuing-service/utils"
+)
+
+var (
+	ErrFilenameEmpty       = errors.New("filename couldn't be empty")
+	ErrNoConfig            = errors.New("configuration file is not exists")
+	ErrNoBlockchainCert    = errors.New("blockchain certificate file is not exists")
+	ErrDisplayHTMLNotFound = errors.New("displayHtml field not found")
+	ErrDisplayHTMLStruct   = errors.New("displayHtml field must be string")
 )
 
 // A CertIssuer for issuing the blockchain certificates
@@ -18,6 +32,11 @@ type CertIssuer interface {
 
 type StorageAdapter interface {
 	StoreCerts(string, string, string) error
+}
+
+// New a certIssuer constructor
+func New(issuer, fn string, pdfgen *wkhtmltopdf.PDFGenerator) CertIssuer {
+	return &certIssuer{issuer, fn, pdfgen}
 }
 
 type certIssuer struct {
@@ -35,11 +54,15 @@ func New(issuer, filename string, storageAdapter StorageAdapter) (CertIssuer, er
 }
 
 func (i *certIssuer) IssueCertificate() error {
+	if i.filename == "" {
+		return ErrFilenameEmpty
+	}
+
 	confPath := i.configsFilepath()
 	defer os.Remove(confPath)
 
 	if !utils.FileExists(confPath) {
-		return errors.New("configuration file is not exists")
+		return ErrNoConfig
 	}
 
 	_, err := exec.Command("env", "CONF_PATH="+confPath, "make").Output()
@@ -74,4 +97,42 @@ func (i *certIssuer) storeAllCerts(dir string) error {
 		return err
 	}
 	return nil
+}
+
+func (i *certIssuer) createPdfFile() (err error) {
+	filepath := i.unsignedCertificatesDir()
+	if !utils.FileExists(filepath) {
+		return ErrNoBlockchainCert
+	}
+
+	blockchainCertContent, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return
+	}
+
+	var blockchainCert map[string]interface{}
+	err = json.Unmarshal(blockchainCertContent, &blockchainCert)
+	if err != nil {
+		return
+	}
+
+	html, ok := blockchainCert["displayHtml"]
+	if !ok {
+		return ErrDisplayHTMLNotFound
+	}
+
+	htmlString, ok := html.(string)
+	if !ok {
+		return ErrDisplayHTMLStruct
+	}
+
+	pdfgen := &(*i.pdfgen)
+	pdfgen.AddPage(wkhtmltopdf.NewPageReader(strings.NewReader(htmlString)))
+
+	err = pdfgen.Create()
+	if err != nil {
+		return
+	}
+
+	return pdfgen.WriteFile(i.pdfFilepath())
 }

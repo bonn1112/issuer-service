@@ -1,13 +1,19 @@
 package cert_issuer
 
-const dataDir = "/storage/data/"
+import "fmt"
+
+var dataDir = "/storage/data/"
 
 func (i *certIssuer) configsFilepath() string {
-	return dataDir + i.issuer + "/configs/" + i.filename + ".ini"
+	return fmt.Sprintf("%s%s/configs/%s.ini", dataDir, i.issuer, i.filename)
+}
+
+func (i *certIssuer) pdfFilepath() string {
+	return fmt.Sprintf("%s%s/pdf/%s.pdf", dataDir, i.issuer, i.filename)
 }
 
 func (i *certIssuer) unsignedCertificatesDir() string {
-	return dataDir + i.issuer + "/unsigned_certificates/" + i.filename + "/"
+	return fmt.Sprintf("%s%s/unsigned_certificates/%s/", dataDir, i.issuer, i.filename)
 }
 
 func (i *certIssuer) blockchainCertificatesDir() string {
