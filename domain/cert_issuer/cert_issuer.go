@@ -3,9 +3,11 @@ package cert_issuer
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
@@ -40,8 +42,9 @@ func New(issuer, fn string, pdfgen *wkhtmltopdf.PDFGenerator) CertIssuer {
 }
 
 type certIssuer struct {
-	issuer         string
-	filename       string
+	issuer   string
+	filename string
+	pdfgen   *wkhtmltopdf.PDFGenerator
 	storageAdapter StorageAdapter
 }
 
@@ -63,6 +66,10 @@ func (i *certIssuer) IssueCertificate() error {
 
 	if !utils.FileExists(confPath) {
 		return ErrNoConfig
+	}
+
+	if err := i.createPdfFile(); err != nil {
+		return err
 	}
 
 	_, err := exec.Command("env", "CONF_PATH="+confPath, "make").Output()
@@ -100,23 +107,23 @@ func (i *certIssuer) storeAllCerts(dir string) error {
 }
 
 func (i *certIssuer) createPdfFile() (err error) {
-	filepath := i.unsignedCertificatesDir()
-	if !utils.FileExists(filepath) {
+	certPath := i.unsignedCertificatesDir()
+	if !utils.FileExists(certPath) {
 		return ErrNoBlockchainCert
 	}
 
-	blockchainCertContent, err := ioutil.ReadFile(filepath)
+	blockchainCertContent, err := ioutil.ReadFile(certPath)
 	if err != nil {
 		return
 	}
 
-	var blockchainCert map[string]interface{}
-	err = json.Unmarshal(blockchainCertContent, &blockchainCert)
+	cert := make(map[string]interface{})
+	err = json.Unmarshal(blockchainCertContent, &cert)
 	if err != nil {
 		return
 	}
 
-	html, ok := blockchainCert["displayHtml"]
+	html, ok := cert["displayHtml"]
 	if !ok {
 		return ErrDisplayHTMLNotFound
 	}
@@ -134,5 +141,24 @@ func (i *certIssuer) createPdfFile() (err error) {
 		return
 	}
 
-	return pdfgen.WriteFile(i.pdfFilepath())
+	err = pdfgen.WriteFile(i.pdfFilepath())
+	if err != nil {
+		return
+	}
+
+	cert["displayPdf"] = fmt.Sprintf("/storage/issuer/%s/html/%s", i.issuer, i.filename)
+
+	jsonCert, err := json.Marshal(&cert)
+	if err != nil {
+		return
+	}
+
+	certFile, err := os.OpenFile(certPath, os.O_RDWR, 0755)
+	if err != nil {
+		return
+	}
+	defer certFile.Close()
+
+	_, err = certFile.WriteAt(jsonCert, 0)
+	return err
 }
