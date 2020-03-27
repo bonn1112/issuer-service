@@ -47,8 +47,10 @@ func (i *certIssuer) storeGCS(filepath string) (err error) {
 
 	w := client.Bucket(bucket).Object(i.certsPathInGCS()).NewWriter(ctx)
 	f, err := os.Open(filepath)
-	_, err = io.Copy(w, f)
 	if err != nil {
+		return err
+	}
+	if _, err = io.Copy(w, f); err != nil {
 		return err
 	}
 	err = w.Close()
