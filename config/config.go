@@ -5,9 +5,10 @@ import (
 )
 
 type Config struct {
-	ProcessEnv string `envconfig:"ISSUINGSERVICE_PROCESS_ENV"`
-	Addr       string `envconfig:"ISSUINGSERVICE_SERVER_ADDR"`
-	LogLevel   string `envconfig:"ISSUINGSERVICE_LOGS_LEVEL"`
+	ProcessEnv   string `envconfig:"ISSUINGSERVICE_PROCESS_ENV"`
+	Addr         string `envconfig:"ISSUINGSERVICE_SERVER_ADDR"`
+	LogLevel     string `envconfig:"ISSUINGSERVICE_LOGS_LEVEL"`
+	CloudService string `envconfig:"ISSUINGSERVICE_CLOUD_SERVICE"`
 }
 
 // Env returns the settings from the environment
@@ -27,6 +28,10 @@ func Env() (conf Config, err error) {
 
 	if conf.LogLevel == "" {
 		conf.LogLevel = "info"
+	}
+
+	if conf.CloudService == "" {
+		conf.CloudService = "GCP"
 	}
 
 	return

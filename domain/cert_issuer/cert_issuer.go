@@ -1,4 +1,4 @@
-package certissuer
+package cert_issuer
 
 import (
 	"errors"
@@ -16,16 +16,25 @@ type CertIssuer interface {
 	IssueCertificate() error
 }
 
+type StorageAdapter interface {
+	StoreCerts(string, string, string) error
+}
+
 type certIssuer struct {
-	issuer   string
-	filename string
+	issuer         string
+	filename       string
+	storageAdapter StorageAdapter
+}
+
+// New a certIssuer constructor
+func New(issuer, filename string, storageAdapter StorageAdapter) (CertIssuer, error) {
+	if filename == "" {
+		return nil, errors.New("filename couldn't be empty")
+	}
+	return &certIssuer{issuer, filename, storageAdapter}, nil
 }
 
 func (i *certIssuer) IssueCertificate() error {
-	if i.filename == "" {
-		return errors.New("filename couldn't be empty")
-	}
-
 	confPath := i.configsFilepath()
 	defer os.Remove(confPath)
 
@@ -50,18 +59,13 @@ func (i *certIssuer) IssueCertificate() error {
 	return nil
 }
 
-// New a certIssuer constructor
-func New(issuer, fn string) CertIssuer {
-	return &certIssuer{issuer, fn}
-}
-
 func (i *certIssuer) storeAllCerts(dir string) error {
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if !info.IsDir() {
-			return i.storeGCS(path)
+			return i.storageAdapter.StoreCerts(path, i.issuer, i.filename)
 		}
 		return nil
 	})

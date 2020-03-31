@@ -28,7 +28,7 @@ func main() {
 	logOpts := configureLogger(conf.LogLevel)
 
 	srv := grpc.NewServer(logOpts...)
-	protocol.RegisterIssuingServiceServer(srv, service.New())
+	protocol.RegisterIssuingServiceServer(srv, service.New(&conf))
 
 	if conf.ProcessEnv == "dev" {
 		logrus.Info("reflection GRPC is registered")
