@@ -1,4 +1,4 @@
-package certissuer
+package cert_issuer
 
 const dataDir = "/storage/data/"
 
@@ -8,4 +8,8 @@ func (i *certIssuer) configsFilepath() string {
 
 func (i *certIssuer) unsignedCertificatesDir() string {
 	return dataDir + i.issuer + "/unsigned_certificates/" + i.filename + "/"
+}
+
+func (i *certIssuer) blockchainCertificatesDir() string {
+	return dataDir + i.issuer + "/blockchain_certificates/" + i.filename + "/"
 }

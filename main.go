@@ -28,14 +28,14 @@ func main() {
 	logOpts := configureLogger(conf.LogLevel)
 
 	srv := grpc.NewServer(logOpts...)
-	protocol.RegisterIssuingServiceServer(srv, service.New())
+	protocol.RegisterIssuingServiceServer(srv, service.New(&conf))
 
 	if conf.ProcessEnv == "dev" {
 		logrus.Info("reflection GRPC is registered")
 		reflection.Register(srv)
 	}
 
-	logrus.Printf("Listening and serving GRPC on %srv\n", conf.Addr)
+	logrus.Printf("Listening and serving GRPC on %s", conf.Addr)
 	if err = srv.Serve(lis); err != nil {
 		logrus.WithError(err).Fatalln("failed to serve")
 	}

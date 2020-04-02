@@ -1,0 +1,66 @@
+package infra
+
+import (
+	"context"
+	"errors"
+	"io"
+	"os"
+	"time"
+
+	"cloud.google.com/go/storage"
+)
+
+var errInvalidProcessEnv = errors.New("Invalid PROCESS_ENV")
+
+type gcsAdapter struct {
+	bucket string
+}
+
+func NewGcsAdapter(processEnv string) (*gcsAdapter, error) {
+	var bucket string
+	switch processEnv {
+	case "dev":
+		bucket = "lst-issuer-dev"
+	case "stg":
+		bucket = "lst-issuer-stg"
+	case "prd":
+		bucket = "lst-issuer-prd"
+	default:
+		return nil, errInvalidProcessEnv
+	}
+
+	return &gcsAdapter{bucket}, nil
+}
+
+func (s *gcsAdapter) StoreCerts(filepath string, issuer string, filename string) (err error) {
+	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
+	defer cancel()
+
+	client, err := storage.NewClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	pathInGcs := certsPathInGCS(issuer, filename)
+	w := client.Bucket(s.bucket).Object(pathInGcs).NewWriter(ctx)
+	f, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+
+	if _, err = io.Copy(w, f); err != nil {
+		return err
+	}
+
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+
+	return
+}
+
+func certsPathInGCS(issuer string, filename string) string {
+	return issuer + "/blockchain_certificates/" + filename + ".json"
+}
