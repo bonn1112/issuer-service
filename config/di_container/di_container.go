@@ -4,13 +4,13 @@ import (
 	"errors"
 
 	"github.com/lastrust/issuing-service/config"
-	"github.com/lastrust/issuing-service/domain/cert_issuer"
+	"github.com/lastrust/issuing-service/domain/certissuer"
 	"github.com/lastrust/issuing-service/infra"
 )
 
 var errInvalidCloudService = errors.New("Invalid CLOUD_SERVICE")
 
-func GetStorageAdapter(conf *config.Config) (cert_issuer.StorageAdapter, error) {
+func GetStorageAdapter(conf *config.Config) (certissuer.StorageAdapter, error) {
 	switch conf.CloudService {
 	case "GCP":
 		return infra.NewGcsAdapter(conf.ProcessEnv)

@@ -5,7 +5,7 @@ import (
 
 	"github.com/lastrust/issuing-service/config"
 	"github.com/lastrust/issuing-service/config/di_container"
-	"github.com/lastrust/issuing-service/domain/cert_issuer"
+	"github.com/lastrust/issuing-service/domain/certissuer"
 	"github.com/lastrust/issuing-service/protocol"
 	"github.com/sirupsen/logrus"
 )
@@ -22,7 +22,7 @@ func (s issuingService) IssueBlockchainCertificate(ctx context.Context, req *pro
 		return nil, err
 	}
 
-	c, err := cert_issuer.New(req.Issuer, req.Filename, storageAdapter)
+	c, err := certissuer.New(req.Issuer, req.Filename, storageAdapter)
 	if err != nil {
 		logrus.WithError(err).Error("failed to build CertIssuer")
 		return nil, err

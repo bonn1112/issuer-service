@@ -1,4 +1,4 @@
-package cert_issuer
+package certissuer
 
 import (
 	"encoding/json"
@@ -8,19 +8,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
-	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
-	"github.com/lastrust/issuing-service/utils"
-	"path/filepath"
-
-	"github.com/lastrust/issuing-service/utils"
+	"github.com/lastrust/issuing-service/infra"
+	"github.com/lastrust/issuing-service/utils/filesystem"
+	"github.com/lastrust/issuing-service/utils/path"
 )
 
 var (
 	ErrFilenameEmpty       = errors.New("filename couldn't be empty")
 	ErrNoConfig            = errors.New("configuration file is not exists")
-	ErrNoBlockchainCert    = errors.New("blockchain certificate file is not exists")
 	ErrDisplayHTMLNotFound = errors.New("displayHtml field not found")
 	ErrDisplayHTMLStruct   = errors.New("displayHtml field must be string")
 )
@@ -37,18 +33,6 @@ type StorageAdapter interface {
 }
 
 // New a certIssuer constructor
-func New(issuer, fn string, pdfgen *wkhtmltopdf.PDFGenerator) CertIssuer {
-	return &certIssuer{issuer, fn, pdfgen}
-}
-
-type certIssuer struct {
-	issuer   string
-	filename string
-	pdfgen   *wkhtmltopdf.PDFGenerator
-	storageAdapter StorageAdapter
-}
-
-// New a certIssuer constructor
 func New(issuer, filename string, storageAdapter StorageAdapter) (CertIssuer, error) {
 	if filename == "" {
 		return nil, errors.New("filename couldn't be empty")
@@ -56,34 +40,42 @@ func New(issuer, filename string, storageAdapter StorageAdapter) (CertIssuer, er
 	return &certIssuer{issuer, filename, storageAdapter}, nil
 }
 
+type certIssuer struct {
+	issuer         string
+	filename       string
+	storageAdapter StorageAdapter
+}
+
 func (i *certIssuer) IssueCertificate() error {
 	if i.filename == "" {
 		return ErrFilenameEmpty
 	}
 
-	confPath := i.configsFilepath()
+	confPath := path.ConfigsFilepath(i.issuer, i.filename)
 	defer os.Remove(confPath)
 
-	if !utils.FileExists(confPath) {
+	if !filesystem.FileExists(confPath) {
 		return ErrNoConfig
 	}
 
 	if err := i.createPdfFile(); err != nil {
-		return err
+		return fmt.Errorf("failed certIssuer.createPdfFile, %v", err)
 	}
 
-	_, err := exec.Command("env", "CONF_PATH="+confPath, "make").Output()
+	cmd := exec.Command("env", "CONF_PATH="+confPath, "make")
+	_, err := cmd.Output()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed command execution (%s), %v", cmd.String(), err)
 	}
+	bcCertsDir := path.BlockchainCertificatesDir(i.issuer, i.filename)
 	defer func() {
-		os.RemoveAll(i.unsignedCertificatesDir())
-		os.RemoveAll(i.blockchainCertificatesDir())
+		os.RemoveAll(path.UnsignedCertificatesDir(i.issuer, i.filename))
+		os.RemoveAll(bcCertsDir)
 	}()
 
-	err = i.storeAllCerts(i.blockchainCertificatesDir())
+	err = i.storeAllCerts(bcCertsDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed certIssuer.storeAllCerts, %v", err)
 	}
 
 	return nil
@@ -107,18 +99,15 @@ func (i *certIssuer) storeAllCerts(dir string) error {
 }
 
 func (i *certIssuer) createPdfFile() (err error) {
-	certPath := i.unsignedCertificatesDir()
-	if !utils.FileExists(certPath) {
-		return ErrNoBlockchainCert
-	}
+	certPath := path.UnsignedCertificatesDir(i.issuer, i.filename)
 
-	blockchainCertContent, err := ioutil.ReadFile(certPath)
+	certContent, err := ioutil.ReadFile(certPath)
 	if err != nil {
 		return
 	}
 
 	cert := make(map[string]interface{})
-	err = json.Unmarshal(blockchainCertContent, &cert)
+	err = json.Unmarshal(certContent, &cert)
 	if err != nil {
 		return
 	}
@@ -127,26 +116,23 @@ func (i *certIssuer) createPdfFile() (err error) {
 	if !ok {
 		return ErrDisplayHTMLNotFound
 	}
-
 	htmlString, ok := html.(string)
 	if !ok {
 		return ErrDisplayHTMLStruct
 	}
 
-	pdfgen := &(*i.pdfgen)
-	pdfgen.AddPage(wkhtmltopdf.NewPageReader(strings.NewReader(htmlString)))
-
-	err = pdfgen.Create()
+	manager, err := infra.NewPdfManager(i.issuer, i.filename)
 	if err != nil {
 		return
 	}
-
-	err = pdfgen.WriteFile(i.pdfFilepath())
-	if err != nil {
+	if err = manager.ToPdf(htmlString); err != nil {
+		return
+	}
+	if err = manager.Save(); err != nil {
 		return
 	}
 
-	cert["displayPdf"] = fmt.Sprintf("/storage/issuer/%s/html/%s", i.issuer, i.filename)
+	cert["displayPdf"] = manager.Link()
 
 	jsonCert, err := json.Marshal(&cert)
 	if err != nil {
