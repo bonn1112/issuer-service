@@ -8,8 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
-	"github.com/lastrust/issuing-service/infra"
+	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/lastrust/issuing-service/utils/filesystem"
 	"github.com/lastrust/issuing-service/utils/path"
 )
@@ -121,18 +122,21 @@ func (i *certIssuer) createPdfFile() (err error) {
 		return ErrDisplayHTMLStruct
 	}
 
-	manager, err := infra.NewPdfManager(i.issuer, i.filename)
+	pdfgen, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
-		return
+		return fmt.Errorf("failed wkhtmltopdf.NewPDFGenerator, %v", err)
 	}
-	if err = manager.ToPdf(htmlString); err != nil {
-		return
+	pdfgen.AddPage(wkhtmltopdf.NewPageReader(
+		strings.NewReader(htmlString),
+	))
+	if err = pdfgen.Create(); err != nil {
+		return fmt.Errorf("failed wkhtmltopdf.PDFGenerator.Create, %v", err)
 	}
-	if err = manager.Save(); err != nil {
-		return
+	if err = pdfgen.WriteFile(path.PdfFilepath(i.issuer, i.filename)); err != nil {
+		return fmt.Errorf("failed wkhtmltopdf.PDFGenerator.WriteFile, %v", err)
 	}
 
-	cert["displayPdf"] = manager.Link()
+	cert["displayPdf"] = fmt.Sprintf("/storage/issuer/%s/html/%s", i.issuer, i.filename)
 
 	jsonCert, err := json.Marshal(&cert)
 	if err != nil {

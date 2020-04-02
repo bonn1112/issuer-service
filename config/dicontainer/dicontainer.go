@@ -1,4 +1,4 @@
-package di_container
+package dicontainer
 
 import (
 	"errors"
