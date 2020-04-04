@@ -3,15 +3,15 @@ FROM surnet/alpine-wkhtmltopdf:3.9-0.12.5-full as wkhtmltopdf-builder
 
 # Build
 FROM golang:1.13.6-alpine3.10 as builder
-COPY ./issuing-service /app
+COPY . /app
 WORKDIR /app
 RUN go build -o /main /app/main.go
 
 # Make blockchain env
 FROM alpine:3.10 as cli
 
-COPY ./issuing-service/pkg/cert-issuer /cert-issuer-cli
-COPY ./issuing-service/pkg/cert-issuer/conf_regtest.ini /etc/cert-issuer/conf.ini
+COPY ./pkg/cert-issuer /cert-issuer-cli
+COPY ./pkg/cert-issuer/conf_regtest.ini /etc/cert-issuer/conf.ini
 
 RUN apk add --update \
         bash \
@@ -72,7 +72,7 @@ WORKDIR /cert-issuer-cli
 RUN python3 setup.py experimental --blockchain=ethereum
 
 WORKDIR /app
-COPY ./issuing-service/Makefile .
+COPY ./Makefile .
 COPY --from=builder /main .
 
 CMD [ "./main" ]
