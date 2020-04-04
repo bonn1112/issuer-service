@@ -28,11 +28,14 @@ func (s issuingService) IssueBlockchainCertificate(ctx context.Context, req *pro
 		return nil, err
 	}
 
-	err = c.IssueCertificate()
+	logrus.Info("Start issuing process")
+	out, err := c.IssueCertificate()
 	if err != nil {
 		logrus.WithError(err).Error("failed cert_issuer.IssueCertificate")
 		return nil, err
 	}
+	logrus.Info(out)
+	logrus.Info("Finish issuing process")
 
 	return &protocol.IssueBlockchainCertificateReply{}, nil
 }

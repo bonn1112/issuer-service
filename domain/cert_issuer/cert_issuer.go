@@ -7,13 +7,14 @@ import (
 	"path/filepath"
 
 	"github.com/lastrust/issuing-service/utils"
+	"github.com/sirupsen/logrus"
 )
 
 // A CertIssuer for issuing the blockchain certificates
 type CertIssuer interface {
 	// IssueCertificate using the unsigned certificate with configuration file
 	// for issuing a blockchain certificate
-	IssueCertificate() error
+	IssueCertificate() (string, error)
 }
 
 type StorageAdapter interface {
@@ -34,39 +35,41 @@ func New(issuer, filename string, storageAdapter StorageAdapter) (CertIssuer, er
 	return &certIssuer{issuer, filename, storageAdapter}, nil
 }
 
-func (i *certIssuer) IssueCertificate() error {
+func (i *certIssuer) IssueCertificate() (string, error) {
 	confPath := i.configsFilepath()
 	defer os.Remove(confPath)
 
 	if !utils.FileExists(confPath) {
-		return errors.New("configuration file is not exists")
+		return "", errors.New("configuration file is not exists")
 	}
 
-	_, err := exec.Command("env", "CONF_PATH="+confPath, "make").Output()
+	out, err := exec.Command("env", "CONF_PATH="+confPath, "make").Output()
 	if err != nil {
-		return err
+		return "", err
 	}
-	defer func() {
-		os.RemoveAll(i.unsignedCertificatesDir())
-		os.RemoveAll(i.blockchainCertificatesDir())
-	}()
+	// defer func() {
+	// 	os.RemoveAll(i.unsignedCertificatesDir())
+	// 	os.RemoveAll(i.blockchainCertificatesDir())
+	// }()
 
-	err = i.storeAllCerts(i.blockchainCertificatesDir())
-	if err != nil {
-		return err
-	}
+	// err = i.storeAllCerts(i.blockchainCertificatesDir())
+	// if err != nil {
+	// 	return "", err
+	// }
 
-	return nil
+	return string(out), nil
 }
 
 func (i *certIssuer) storeAllCerts(dir string) error {
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		logrus.Infof("Start storing certs: %s", path)
 		if err != nil {
 			return err
 		}
 		if !info.IsDir() {
 			return i.storageAdapter.StoreCerts(path, i.issuer, i.filename)
 		}
+		logrus.Infof("Finish storing certs: %s", path)
 		return nil
 	})
 

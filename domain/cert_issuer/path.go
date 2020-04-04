@@ -7,9 +7,9 @@ func (i *certIssuer) configsFilepath() string {
 }
 
 func (i *certIssuer) unsignedCertificatesDir() string {
-	return dataDir + i.issuer + "/unsigned_certificates/" + i.filename + "/"
+	return dataDir + i.issuer + "/unsigned_certificates/"
 }
 
 func (i *certIssuer) blockchainCertificatesDir() string {
-	return dataDir + i.issuer + "/blockchain_certificates/" + i.filename + "/"
+	return dataDir + i.issuer + "/blockchain_certificates/"
 }
