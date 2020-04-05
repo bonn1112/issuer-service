@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/lastrust/issuing-service/utils/path"
 )
 
 var errInvalidProcessEnv = errors.New("Invalid PROCESS_ENV")
@@ -42,7 +43,7 @@ func (s *gcsAdapter) StoreCerts(filepath string, issuer string, filename string)
 		return err
 	}
 
-	pathInGcs := certsPathInGCS(issuer, filename)
+	pathInGcs := path.CertsPathInGCS(issuer, filename)
 	w := client.Bucket(s.bucket).Object(pathInGcs).NewWriter(ctx)
 	f, err := os.Open(filepath)
 	if err != nil {
@@ -59,8 +60,4 @@ func (s *gcsAdapter) StoreCerts(filepath string, issuer string, filename string)
 	}
 
 	return
-}
-
-func certsPathInGCS(issuer string, filename string) string {
-	return issuer + "/blockchain_certificates/" + filename + ".json"
 }
