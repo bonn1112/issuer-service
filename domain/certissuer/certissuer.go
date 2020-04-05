@@ -55,6 +55,7 @@ func (i *certIssuer) IssueCertificate() error {
 	}
 
 	confPath := path.ConfigsFilepath(i.issuer, i.filename)
+	// [FIXME] this method remove only one file in the case of bulk issuing
 	defer os.Remove(confPath)
 
 	if !filesystem.FileExists(confPath) {
@@ -73,6 +74,7 @@ func (i *certIssuer) IssueCertificate() error {
 	logrus.Info(string(out))
 
 	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
+	// [TODO] Uncomment after update the upload functions
 	// defer func() {
 	// 	os.RemoveAll(path.UnsignedCertificatesDir(i.issuer))
 	// 	os.RemoveAll(bcCertsDir)
