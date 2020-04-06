@@ -1,19 +1,22 @@
 @startuml
 allow_mixing
-class certIssuer {
-  issuer
-  filename
+
+package certissuer {
+  class certIssuer {
+    issuer
+    filename
+  }
+  note left
+    - issue certificate by pkg/
+    - upload files to storage
+    - delete used templates/certs
+  end note
+
+  interface StorageAdapter {
+    StoreCerts()
+  }
 }
 
-note left
-  - issue certificate by pkg/
-  - upload files to storage
-  - delete used templates/certs
-end note
-
-interface StorageAdapter {
-  StoreCerts()
-}
 storage storage
 
 class xxxAdapter {
