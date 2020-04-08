@@ -57,7 +57,6 @@ RUN apk add --no-cache \
       ttf-ubuntu-font-family \
     && apk add --no-cache --virtual .build-deps \
       msttcorefonts-installer \
-    \
 # Install microsoft fonts
     && update-ms-fonts \
     && fc-cache -f \
