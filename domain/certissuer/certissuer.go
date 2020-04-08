@@ -83,7 +83,7 @@ func (i *certIssuer) IssueCertificate() error {
 }
 
 func (i *certIssuer) storeAllCerts(dir string) error {
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -92,15 +92,19 @@ func (i *certIssuer) storeAllCerts(dir string) error {
 		}
 		return nil
 	})
-
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (i *certIssuer) createPdfFile() (err error) {
-	certPath := path.UnsignedCertificatesDir(i.issuer, i.filename)
+	certDir := path.UnsignedCertificatesDir(i.issuer, i.filename)
+	var certPath string
+	if err = filepath.Walk(certDir, func(path string, info os.FileInfo, _ error) error {
+		if !info.IsDir() {
+			certPath = path
+		}
+		return nil
+	}); err != nil || certPath == "" {
+		return fmt.Errorf("fail of walking in unsigned certificate directory %s, %v", certDir, err)
+	}
 
 	certContent, err := ioutil.ReadFile(certPath)
 	if err != nil {
