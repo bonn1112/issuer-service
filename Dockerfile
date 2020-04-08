@@ -57,7 +57,7 @@ RUN apk add --no-cache \
       msttcorefonts-installer \
     \
     # custom fonts
-    && cp fonts-japanese-mincho.ttf /usr/share/fonts/truetype/ \
+    && cp docker/fonts/* /usr/share/fonts/truetype/ \
 # Install microsoft fonts
     && update-ms-fonts \
     && fc-cache -f \
