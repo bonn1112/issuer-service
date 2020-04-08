@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/lastrust/issuing-service/utils/filesystem"
@@ -85,15 +84,16 @@ func (i *certIssuer) IssueCertificate() error {
 }
 
 func (i *certIssuer) storeAllCerts(dir string) error {
-	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			return i.storageAdapter.StoreCerts(path, i.issuer, i.filename)
-		}
-		return nil
-	})
+	files, err := filesystem.GetFiles(dir)
+	if err != nil {
+		return err
+	}
+
+	for _, file := range files {
+		return i.storageAdapter.StoreCerts(file.Path, i.issuer, i.filename)
+	}
+
+	return nil
 }
 
 type layoutData struct {
@@ -102,15 +102,11 @@ type layoutData struct {
 
 func (i *certIssuer) createPdfFile() (err error) {
 	certDir := path.UnsignedCertificatesDir(i.issuer, i.filename)
-	var certPath string
-	if err = filepath.Walk(certDir, func(path string, info os.FileInfo, _ error) error {
-		if !info.IsDir() {
-			certPath = path
-		}
-		return nil
-	}); err != nil || certPath == "" {
+	files, err := filesystem.GetFiles(certDir)
+	if err != nil || len(files) < 1 {
 		return fmt.Errorf("fail of walking in unsigned certificate directory %s, %v", certDir, err)
 	}
+	certPath := files[0].Path
 
 	certContent, err := ioutil.ReadFile(certPath)
 	if err != nil {
