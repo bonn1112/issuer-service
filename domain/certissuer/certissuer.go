@@ -71,7 +71,7 @@ func (i *certIssuer) IssueCertificate() error {
 	if err != nil {
 		return fmt.Errorf("failed command execution (%s), %v", cmd.String(), err)
 	}
-	logrus.Info(string(out))
+	logrus.Infof("command exec: %s | output: %s", cmd.String(), string(out))
 
 	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
 	// [TODO] Uncomment after update the upload functions
