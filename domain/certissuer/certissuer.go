@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/lastrust/issuing-service/utils/filesystem"
 	"github.com/lastrust/issuing-service/utils/path"
@@ -34,6 +36,12 @@ type StorageAdapter interface {
 	StoreCerts(string, string, string) error
 }
 
+type certIssuer struct {
+	issuer         string
+	filename       string
+	storageAdapter StorageAdapter
+}
+
 // New a certIssuer constructor
 func New(issuer, filename string, storageAdapter StorageAdapter) (CertIssuer, error) {
 	if filename == "" {
@@ -42,18 +50,13 @@ func New(issuer, filename string, storageAdapter StorageAdapter) (CertIssuer, er
 	return &certIssuer{issuer, filename, storageAdapter}, nil
 }
 
-type certIssuer struct {
-	issuer         string
-	filename       string
-	storageAdapter StorageAdapter
-}
-
 func (i *certIssuer) IssueCertificate() error {
 	if i.filename == "" {
 		return ErrFilenameEmpty
 	}
 
 	confPath := path.ConfigsFilepath(i.issuer, i.filename)
+	// [FIXME] this method remove only one file in the case of bulk issuing
 	defer os.Remove(confPath)
 
 	if !filesystem.FileExists(confPath) {
@@ -65,15 +68,18 @@ func (i *certIssuer) IssueCertificate() error {
 	}
 
 	cmd := exec.Command("env", "CONF_PATH="+confPath, "make")
-	_, err := cmd.Output()
+	out, err := cmd.Output()
 	if err != nil {
 		return fmt.Errorf("failed command execution (%s), %v", cmd.String(), err)
 	}
-	bcCertsDir := path.BlockchainCertificatesDir(i.issuer, i.filename)
-	defer func() {
-		os.RemoveAll(path.UnsignedCertificatesDir(i.issuer, i.filename))
-		os.RemoveAll(bcCertsDir)
-	}()
+	logrus.Infof("command exec: %s | output: %s", cmd.String(), string(out))
+
+	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
+	// [TODO] Uncomment after update the upload functions
+	// defer func() {
+	// 	os.RemoveAll(path.UnsignedCertificatesDir(i.issuer))
+	// 	os.RemoveAll(bcCertsDir)
+	// }()
 
 	err = i.storeAllCerts(bcCertsDir)
 	if err != nil {
@@ -101,12 +107,7 @@ type layoutData struct {
 }
 
 func (i *certIssuer) createPdfFile() (err error) {
-	certDir := path.UnsignedCertificatesDir(i.issuer, i.filename)
-	files, err := filesystem.GetFiles(certDir)
-	if err != nil || len(files) < 1 {
-		return fmt.Errorf("fail of walking in unsigned certificate directory %s, %v", certDir, err)
-	}
-	certPath := files[0].Path
+	certPath := fmt.Sprintf("%s%s.json", path.UnsignedCertificatesDir(i.issuer), i.filename)
 
 	certContent, err := ioutil.ReadFile(certPath)
 	if err != nil {

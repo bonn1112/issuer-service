@@ -14,6 +14,10 @@ type issuingService struct {
 	conf *config.Config
 }
 
+func New(conf *config.Config) protocol.IssuingServiceServer {
+	return &issuingService{conf}
+}
+
 // IssueBlockchainCertificate run the command of pkg/cert-issuer, returns an error if is not success
 func (s issuingService) IssueBlockchainCertificate(ctx context.Context, req *protocol.IssueBlockchainCertificateRequest) (*protocol.IssueBlockchainCertificateReply, error) {
 	storageAdapter, err := dicontainer.GetStorageAdapter(s.conf)
@@ -22,22 +26,21 @@ func (s issuingService) IssueBlockchainCertificate(ctx context.Context, req *pro
 		return nil, err
 	}
 
-	c, err := certissuer.New(req.Issuer, req.Filename, storageAdapter)
+	issuer := req.Issuer,
+	filename := req.Filename
+
+	c, err := certissuer.New(issuer, filename, storageAdapter)
 	if err != nil {
 		logrus.WithError(err).Error("failed to build CertIssuer")
 		return nil, err
 	}
 
-	err = c.IssueCertificate()
-	if err != nil {
+	logrus.Infof("Start issuing process: %s %s", issuer, filename)
+	if err = c.IssueCertificate(); err != nil {
 		logrus.WithError(err).Error("failed cert_issuer.IssueCertificate")
 		return nil, err
 	}
+	logrus.Infof("Finish issuing process: %s %s", issuer, filename)
 
 	return &protocol.IssueBlockchainCertificateReply{}, nil
-}
-
-// New issuingService constructor
-func New(conf *config.Config) protocol.IssuingServiceServer {
-	return &issuingService{conf}
 }
