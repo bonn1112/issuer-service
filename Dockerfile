@@ -7,6 +7,8 @@ COPY . /app
 WORKDIR /app
 RUN go build -o /main /app/main.go
 
+COPY docker/fonts/* /usr/share/fonts/truetype/
+
 # Make blockchain env
 FROM alpine:3.10 as cli
 
