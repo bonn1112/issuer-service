@@ -1,14 +1,14 @@
 package certissuer
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -22,6 +22,7 @@ var (
 	ErrNoConfig            = errors.New("configuration file is not exists")
 	ErrDisplayHTMLNotFound = errors.New("displayHtml field not found")
 	ErrDisplayHTMLStruct   = errors.New("displayHtml field must be string")
+	ErrParseLayoutFile     = errors.New("failed parsing layout file")
 )
 
 // A CertIssuer for issuing the blockchain certificates
@@ -71,7 +72,7 @@ func (i *certIssuer) IssueCertificate() error {
 	if err != nil {
 		return fmt.Errorf("failed command execution (%s), %v", cmd.String(), err)
 	}
-	logrus.Info(string(out))
+	logrus.Infof("command exec: %s | output: %s", cmd.String(), string(out))
 
 	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
 	// TODO: Uncomment after update the upload functions
@@ -89,20 +90,20 @@ func (i *certIssuer) IssueCertificate() error {
 }
 
 func (i *certIssuer) storeAllCerts(dir string) error {
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			return i.storageAdapter.StoreCerts(path, i.issuer, i.filename)
-		}
-		return nil
-	})
-
+	files, err := filesystem.GetFiles(dir)
 	if err != nil {
 		return err
 	}
+
+	for _, file := range files {
+		return i.storageAdapter.StoreCerts(file.Path, i.issuer, i.filename)
+	}
+
 	return nil
+}
+
+type layoutData struct {
+	Content template.HTML
 }
 
 func (i *certIssuer) createPdfFile() (err error) {
@@ -128,13 +129,22 @@ func (i *certIssuer) createPdfFile() (err error) {
 		return ErrDisplayHTMLStruct
 	}
 
+	// TODO: rewrite to reading this file at once
+	tpl, err := template.ParseFiles("static/layout.html")
+	if err != nil {
+		return ErrParseLayoutFile
+	}
+
+	var buf bytes.Buffer
+	if err = tpl.Execute(&buf, layoutData{template.HTML(htmlString)}); err != nil {
+		return fmt.Errorf("failed executing template, %v", err)
+	}
+
 	pdfgen, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
 		return fmt.Errorf("failed wkhtmltopdf.NewPDFGenerator, %v", err)
 	}
-	pdfgen.AddPage(wkhtmltopdf.NewPageReader(
-		strings.NewReader(htmlString),
-	))
+	pdfgen.AddPage(wkhtmltopdf.NewPageReader(bytes.NewBuffer(buf.Bytes())))
 	if err = pdfgen.Create(); err != nil {
 		return fmt.Errorf("failed wkhtmltopdf.PDFGenerator.Create, %v", err)
 	}
