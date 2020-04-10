@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	processEnv     = env.GetDefault("PROCESS_ENV", "prd")
+	processEnv     = env.GetDefault("PROCESS_ENV", "dev")
 	logLevelString = env.GetDefault("TEMPLATESERVICE_LOGS_LEVEL", "info")
 	cloudService   = env.GetDefault("CLOUD_SERVICE", "gcp")
 	port           = ":8080"
