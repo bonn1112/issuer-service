@@ -12,8 +12,8 @@ COPY docker/fonts/* /usr/share/fonts/truetype/
 # Make blockchain env
 FROM alpine:3.10 as cli
 
-COPY ./pkg/cert-issuer /cert-issuer-cli
-COPY ./pkg/cert-issuer/conf_regtest.ini /etc/cert-issuer/conf.ini
+COPY ./issuing-service/pkg/cert-issuer /cert-issuer-cli
+COPY ./issuing-service/pkg/cert-issuer/conf_regtest.ini /etc/cert-issuer/conf.ini
 
 RUN apk add --update \
         bash \

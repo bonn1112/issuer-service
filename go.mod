@@ -26,6 +26,7 @@ require (
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad // indirect
 	google.golang.org/api v0.20.0 // indirect
 	google.golang.org/grpc v1.27.0
+	gopkg.in/ini.v1 v1.51.1
 	gopkg.in/urfave/cli.v2 v2.0.0-20190806201727-b62605953717 // indirect
 	gopkg.in/yaml.v2 v2.2.7 // indirect
 )
