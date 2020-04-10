@@ -25,29 +25,41 @@ var (
 	ErrParseLayoutFile     = errors.New("failed parsing layout file")
 )
 
-// A CertIssuer for issuing the blockchain certificates
-type CertIssuer interface {
-	// IssueCertificate using the unsigned certificate with configuration file
-	// for issuing a blockchain certificate
-	IssueCertificate() error
-}
+type (
+	// A CertIssuer for issuing the blockchain certificates
+	CertIssuer interface {
+		// IssueCertificate using the unsigned certificate with configuration file
+		// for issuing a blockchain certificate
+		IssueCertificate() error
+	}
 
-type StorageAdapter interface {
-	StoreCerts(string, string, string) error
-}
+	StorageAdapter interface {
+		StoreCerts(string, string, string) error
+	}
+
+	Command interface {
+		HtmlToPdf(htmlFilepath, pdfFilepath string) ([]byte, error)
+	}
+)
 
 type certIssuer struct {
 	issuer         string
 	filename       string
 	storageAdapter StorageAdapter
+	command        Command
 }
 
 // New a certIssuer constructor
-func New(issuer, filename string, storageAdapter StorageAdapter) (CertIssuer, error) {
+func New(issuer, filename string, storageAdapter StorageAdapter, command Command) (CertIssuer, error) {
 	if filename == "" {
 		return nil, errors.New("filename couldn't be empty")
 	}
-	return &certIssuer{issuer, filename, storageAdapter}, nil
+	return &certIssuer{
+		issuer:         issuer,
+		filename:       filename,
+		storageAdapter: storageAdapter,
+		command:        command,
+	}, nil
 }
 
 func (i *certIssuer) IssueCertificate() error {
