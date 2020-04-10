@@ -6,42 +6,44 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
-	"github.com/lastrust/issuing-service/config"
 	"github.com/lastrust/issuing-service/protocol"
 	"github.com/lastrust/issuing-service/service"
+	"github.com/lastrust/issuing-service/utils/env"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
-func main() {
-	conf, err := config.Env()
-	if err != nil {
-		logrus.WithError(err).Fatalln("invalid configuration")
-	}
+var (
+	processEnv     = env.GetDefault("PROCESS_ENV", "prd")
+	logLevelString = env.GetDefault("TEMPLATESERVICE_LOGS_LEVEL", "info")
+	cloudService   = env.GetDefault("CLOUD_SERVICE", "gcp")
+	port           = ":8080"
+)
 
-	lis, err := net.Listen("tcp", conf.Addr)
+func main() {
+	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		logrus.WithError(err).Fatalln("failed to listen")
 	}
 
-	logOpts := configureLogger(conf.LogLevel)
+	logOpts := configureLogger()
 
 	srv := grpc.NewServer(logOpts...)
-	protocol.RegisterIssuingServiceServer(srv, service.New(&conf))
+	protocol.RegisterIssuingServiceServer(srv, service.New(cloudService, processEnv))
 
-	if conf.ProcessEnv == "dev" {
+	if processEnv == "dev" {
 		logrus.Info("reflection GRPC is registered")
 		reflection.Register(srv)
 	}
 
-	logrus.Printf("Listening and serving GRPC on %s", conf.Addr)
+	logrus.Printf("Listening GRPC on %s", port)
 	if err = srv.Serve(lis); err != nil {
 		logrus.WithError(err).Fatalln("failed to serve")
 	}
 }
 
-func configureLogger(logLevelString string) []grpc.ServerOption {
+func configureLogger() []grpc.ServerOption {
 	logLevel, err := logrus.ParseLevel(logLevelString)
 	if err != nil {
 		logrus.WithError(err).Fatalln("failed parse log level")

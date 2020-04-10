@@ -1,0 +1,40 @@
+@startuml
+allow_mixing
+
+package certissuer {
+  class certIssuer {
+    issuer
+    filename
+  }
+  note left
+    - issue certificate by pkg/
+    - upload files to storage
+    - delete used templates/certs
+  end note
+
+  interface StorageAdapter {
+    StoreCerts()
+  }
+}
+
+storage storage
+
+class xxxAdapter {
+  StoreCerts()
+}
+
+class service {
+  config
+}
+
+object dicontainer {
+  GetStorageAdapter()
+}
+
+service -up-> certIssuer
+certIssuer -right-> StorageAdapter
+xxxAdapter -up-|> StorageAdapter
+service -right-> dicontainer
+xxxAdapter .left.> dicontainer : DI
+xxxAdapter .down. storage
+@enduml

@@ -75,7 +75,7 @@ func (i *certIssuer) IssueCertificate() error {
 	logrus.Infof("command exec: %s | output: %s", cmd.String(), string(out))
 
 	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
-	// [TODO] Uncomment after update the upload functions
+	// TODO: Uncomment after update the upload functions
 	// defer func() {
 	// 	os.RemoveAll(path.UnsignedCertificatesDir(i.issuer))
 	// 	os.RemoveAll(bcCertsDir)
