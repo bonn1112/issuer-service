@@ -12,7 +12,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/lastrust/issuing-service/utils/filesystem"
 	"github.com/lastrust/issuing-service/utils/path"
 )
@@ -118,65 +117,104 @@ type layoutData struct {
 	Content template.HTML
 }
 
-func (i *certIssuer) createPdfFile() (err error) {
-	certPath := fmt.Sprintf("%s%s.json", path.UnsignedCertificatesDir(i.issuer), i.filename)
+func (i *certIssuer) createPdfFile() error {
+	var (
+		err  error
+		cert = make(map[string]interface{})
+		html interface{}
 
-	certContent, err := ioutil.ReadFile(certPath)
+		certPath     = fmt.Sprintf("%s%s.json", path.UnsignedCertificatesDir(i.issuer), i.filename)
+		htmlFilepath = path.HtmlTempFilepath(i.issuer, i.filename)
+	)
+
+	defer os.Remove(htmlFilepath)
+
+	// space for parsing unsigned certificate
+	err = func() error {
+		certContent, err := ioutil.ReadFile(certPath)
+		if err != nil {
+			return err
+		}
+
+		cert = make(map[string]interface{})
+		err = json.Unmarshal(certContent, &cert)
+		if err != nil {
+			return err
+		}
+
+		var ok bool
+		html, ok = cert["displayHtml"]
+		if !ok {
+			return ErrDisplayHTMLNotFound
+		}
+
+		return nil
+	}()
 	if err != nil {
-		return
+		return err
 	}
 
-	cert := make(map[string]interface{})
-	err = json.Unmarshal(certContent, &cert)
+	// space for creating temporary html template
+	err = func() error {
+		htmlString, ok := html.(string)
+		if !ok {
+			return ErrDisplayHTMLStruct
+		}
+
+		// TODO: rewrite to reading this file at once
+		tpl, err := template.ParseFiles("static/layout.html")
+		if err != nil {
+			return ErrParseLayoutFile
+		}
+
+		var buf bytes.Buffer
+		if err = tpl.Execute(&buf, layoutData{template.HTML(htmlString)}); err != nil {
+			return fmt.Errorf("failed executing template, %v", err)
+		}
+
+		htmlFile, err := os.OpenFile(htmlFilepath, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0755)
+		if err != nil {
+			return fmt.Errorf("create temp html file error, %v", err)
+		}
+		_, _ = htmlFile.Write(buf.Bytes())
+		htmlFile.Close()
+		return nil
+	}()
 	if err != nil {
-		return
+		return err
 	}
 
-	html, ok := cert["displayHtml"]
-	if !ok {
-		return ErrDisplayHTMLNotFound
-	}
-	htmlString, ok := html.(string)
-	if !ok {
-		return ErrDisplayHTMLStruct
-	}
-
-	// TODO: rewrite to reading this file at once
-	tpl, err := template.ParseFiles("static/layout.html")
+	// space for executing a command
+	err = func() error {
+		out, err := i.command.HtmlToPdf(htmlFilepath, path.PdfFilepath(i.issuer, i.filename))
+		if err != nil {
+			return fmt.Errorf("error htmltopdf execution, %#v", err)
+		}
+		logrus.Debugf("[EXECUTE] out: %s\n", string(out))
+		return nil
+	}()
 	if err != nil {
-		return ErrParseLayoutFile
+		return err
 	}
 
-	var buf bytes.Buffer
-	if err = tpl.Execute(&buf, layoutData{template.HTML(htmlString)}); err != nil {
-		return fmt.Errorf("failed executing template, %v", err)
-	}
+	// space for updating unsigned certificate, add displayPdf field
+	err = func() error {
+		cert["displayPdf"] = fmt.Sprintf("/storage/issuer/%s/html/%s", i.issuer, i.filename)
 
-	pdfgen, err := wkhtmltopdf.NewPDFGenerator()
-	if err != nil {
-		return fmt.Errorf("failed wkhtmltopdf.NewPDFGenerator, %v", err)
-	}
-	pdfgen.AddPage(wkhtmltopdf.NewPageReader(bytes.NewBuffer(buf.Bytes())))
-	if err = pdfgen.Create(); err != nil {
-		return fmt.Errorf("failed wkhtmltopdf.PDFGenerator.Create, %v", err)
-	}
-	if err = pdfgen.WriteFile(path.PdfFilepath(i.issuer, i.filename)); err != nil {
-		return fmt.Errorf("failed wkhtmltopdf.PDFGenerator.WriteFile, %v", err)
-	}
+		jsonCert, err := json.Marshal(&cert)
+		if err != nil {
+			return err
+		}
 
-	cert["displayPdf"] = fmt.Sprintf("/storage/issuer/%s/html/%s", i.issuer, i.filename)
+		certFile, err := os.OpenFile(certPath, os.O_RDWR, 0755)
+		if err != nil {
+			return err
+		}
+		defer certFile.Close()
 
-	jsonCert, err := json.Marshal(&cert)
-	if err != nil {
-		return
-	}
+		_, err = certFile.WriteAt(jsonCert, 0)
+		return err
+	}()
 
-	certFile, err := os.OpenFile(certPath, os.O_RDWR, 0755)
-	if err != nil {
-		return
-	}
-	defer certFile.Close()
-
-	_, err = certFile.WriteAt(jsonCert, 0)
 	return err
 }

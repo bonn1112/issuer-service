@@ -8,6 +8,10 @@ func ConfigsFilepath(issuer, filename string) string {
 	return fmt.Sprintf("%s%s/configs/%s.ini", dataDir, issuer, filename)
 }
 
+func HtmlTempFilepath(issuer, filename string) string {
+	return fmt.Sprintf("%s%s/html_tmp/%s.html", dataDir, issuer, filename)
+}
+
 func PdfFilepath(issuer, filename string) string {
 	return fmt.Sprintf("%s%s/pdf/%s.pdf", dataDir, issuer, filename)
 }
