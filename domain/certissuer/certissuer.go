@@ -56,16 +56,17 @@ func (i *certIssuer) IssueCertificate() error {
 	}
 
 	confPath := path.ConfigsFilepath(i.issuer, i.filename)
-	// [FIXME] this method remove only one file in the case of bulk issuing
+	// FIXME: this method remove only one file in the case of bulk issuing
 	defer os.Remove(confPath)
 
 	if !filesystem.FileExists(confPath) {
 		return ErrNoConfig
 	}
 
-	if err := i.createPdfFile(); err != nil {
-		return fmt.Errorf("failed certIssuer.createPdfFile, %v", err)
-	}
+	// FIXME: failed parsing layout file
+	// if err := i.createPdfFile(); err != nil {
+	// 	return fmt.Errorf("failed certIssuer.createPdfFile, %v", err)
+	// }
 
 	cmd := exec.Command("env", "CONF_PATH="+confPath, "make")
 	out, err := cmd.Output()
