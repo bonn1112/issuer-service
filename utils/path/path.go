@@ -20,6 +20,10 @@ func UnsignedCertificatesDir(issuer string) string {
 	return fmt.Sprintf("%s%s/unsigned_certificates/", dataDir, issuer)
 }
 
+func UnsignedCertificateFilepath(issuer, filename string) string {
+	return fmt.Sprintf("%s%s.json", UnsignedCertificatesDir(issuer), filename)
+}
+
 func BlockchainCertificatesDir(issuer string) string {
 	return fmt.Sprintf("%s%s/blockchain_certificates/", dataDir, issuer)
 }
