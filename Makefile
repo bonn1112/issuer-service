@@ -7,7 +7,8 @@ issue:
 	fi
 
 .PHONY: htmltopdf
+CHROME_BIN?=/usr/bin/chromium-browser
 htmltopdf:
-	node ./pkg/htmltopdf/index.js ${HTML_FILEPATH} ${PDF_FILEPATH}
+	env CHROME_BIN=${CHROME_BIN} node ./pkg/htmltopdf/index.js ${HTML_FILEPATH} ${PDF_FILEPATH}
 
 .DEFAULT_GOAL := issue

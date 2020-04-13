@@ -6,10 +6,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Command struct{}
+type Command struct {
+	ChromeBin string
+}
 
 func New() *Command {
-	return &Command{}
+	return &Command{
+		ChromeBin: "/usr/bin/chromium-browser",
+	}
 }
 
 func (Command) IssueBlockchainCertificate(confPath string) ([]byte, error) {
@@ -21,9 +25,10 @@ func (Command) IssueBlockchainCertificate(confPath string) ([]byte, error) {
 	return cmd.Output()
 }
 
-func (Command) HtmlToPdf(htmlFilepath, pdfFilepath string) ([]byte, error) {
+func (c *Command) HtmlToPdf(htmlFilepath, pdfFilepath string) ([]byte, error) {
 	cmd := exec.Command(
 		"make", "htmltopdf",
+		"CHROME_BIN="+c.ChromeBin,
 		"HTML_FILEPATH="+htmlFilepath,
 		"PDF_FILEPATH="+pdfFilepath,
 	)

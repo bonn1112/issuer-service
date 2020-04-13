@@ -14,7 +14,11 @@ const pdfFilepath = args[3];
     const buf = fs.readFileSync(htmlFilepath, {encoding: 'utf-8'});
     const html = buf.toString('ascii');
 
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+        executablePath: process.env.CHROME_BIN || null,
+        browserName: 'chrome',
+        args: ['--no-sandbox', '--headless', '--disable-gpu']
+    });
     const page = await browser.newPage();
     await page.setContent(html, {waitUntil: 'networkidle2'});
     await page.pdf({path: pdfFilepath, format: 'A4'});
