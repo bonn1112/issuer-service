@@ -4,6 +4,9 @@ import (
 	"context"
 
 	"github.com/lastrust/issuing-service/domain/certissuer"
+	"github.com/lastrust/issuing-service/domain/pdfconv"
+	"github.com/lastrust/issuing-service/infra/command"
+	"github.com/lastrust/issuing-service/infra/htmltopdf"
 	"github.com/lastrust/issuing-service/protocol"
 	"github.com/lastrust/issuing-service/utils/dicontainer"
 	"github.com/sirupsen/logrus"
@@ -32,7 +35,10 @@ func (s issuingService) IssueBlockchainCertificate(
 	issuer := req.Issuer
 	filename := req.Filename
 
-	ci, err := certissuer.New(issuer, filename, storageAdapter)
+	cmd := command.New()
+	pdfConverter := pdfconv.New(htmltopdf.New(cmd))
+
+	ci, err := certissuer.New(issuer, filename, storageAdapter, cmd, pdfConverter)
 	if err != nil {
 		logrus.WithError(err).Error("failed to build CertIssuer")
 		return nil, err
