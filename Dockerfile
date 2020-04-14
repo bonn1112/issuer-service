@@ -43,6 +43,7 @@ RUN python3 setup.py experimental --blockchain=ethereum
 
 # install htmltopdf cli
 WORKDIR /app/pkg/htmltopdf
+COPY ./pkg/htmltopdf /app/pkg/htmltopdf
 RUN sed -i -e 's/v3.11/edge/g' /etc/apk/repositories \
     && apk add --no-cache \
     openjdk8-jre-base \
