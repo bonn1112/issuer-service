@@ -32,24 +32,21 @@ func (s issuingService) IssueBlockchainCertificate(
 		return nil, err
 	}
 
-	issuer := req.Issuer
-	filename := req.Filename
-
 	cmd := command.New()
 	pdfConverter := pdfconv.New(htmltopdf.New(cmd))
 
-	ci, err := certissuer.New(issuer, filename, storageAdapter, cmd, pdfConverter)
+	ci, err := certissuer.New(req.Issuer, req.ProcessId, req.Filename, storageAdapter, cmd, pdfConverter)
 	if err != nil {
 		logrus.WithError(err).Error("failed to build CertIssuer")
 		return nil, err
 	}
 
-	logrus.Infof("Start issuing process: %s %s", issuer, filename)
+	logrus.Infof("Start issuing process: %s %s %s", req.Issuer, req.ProcessId, req.Filename)
 	if err = ci.IssueCertificate(); err != nil {
 		logrus.WithError(err).Error("failed cert_issuer.IssueCertificate")
 		return nil, err
 	}
-	logrus.Infof("Finish issuing process: %s %s", issuer, filename)
+	logrus.Infof("Finish issuing process: %s %s %s", req.Issuer, req.ProcessId, req.Filename)
 
 	return &protocol.IssueBlockchainCertificateReply{}, nil
 }

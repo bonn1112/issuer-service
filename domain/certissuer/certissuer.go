@@ -35,6 +35,7 @@ type (
 
 type certIssuer struct {
 	issuer         string
+	processId      string
 	filename       string
 	storageAdapter StorageAdapter
 	command        Command
@@ -43,7 +44,7 @@ type certIssuer struct {
 
 // New a certIssuer constructor
 func New(
-	issuer, filename string,
+	issuer, processId, filename string,
 	storageAdapter StorageAdapter,
 	command Command,
 	pdfConverter pdfconv.PdfConverter,
@@ -53,6 +54,7 @@ func New(
 	}
 	return &certIssuer{
 		issuer:         issuer,
+		processId:      processId,
 		filename:       filename,
 		storageAdapter: storageAdapter,
 		command:        command,
@@ -86,10 +88,10 @@ func (i *certIssuer) IssueCertificate() error {
 
 	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
 	// TODO: Uncomment after update the upload functions
-	// defer func() {
-	// 	os.RemoveAll(path.UnsignedCertificatesDir(i.issuer))
-	// 	os.RemoveAll(bcCertsDir)
-	// }()
+	//defer func() {
+	//	os.RemoveAll(path.UnsignedCertificatesDir(i.issuer))
+	//	os.RemoveAll(bcCertsDir)
+	//}()
 
 	err = i.storeAllCerts(bcCertsDir)
 	if err != nil {
