@@ -17,9 +17,14 @@ func New() *Command {
 }
 
 func (Command) IssueBlockchainCertificate(confPath string) ([]byte, error) {
+	// cmd := exec.Command(
+	// 	"make", "issue",
+	// 	"CONF_PATH="+confPath,
+	// )
 	cmd := exec.Command(
-		"make", "issue",
-		"CONF_PATH="+confPath,
+		"/usr/bin/cert-issuer",
+		"-c",
+		confPath,
 	)
 	logrus.Debugf("[EXECUTE] cmd: %s\n", cmd.String())
 	return cmd.Output()

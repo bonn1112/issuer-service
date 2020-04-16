@@ -61,6 +61,4 @@ WORKDIR /app
 COPY ./Makefile .
 COPY --from=builder /main .
 
-ADD ./storage /storage
-
 CMD [ "./main" ]
