@@ -23,7 +23,7 @@ func New(cloudService, processEnv string) protocol.IssuingServiceServer {
 
 // IssueBlockchainCertificate run the command of pkg/cert-issuer, returns an error if is not success
 func (s issuingService) IssueBlockchainCertificate(
-	ctx context.Context,
+	_ context.Context,
 	req *protocol.IssueBlockchainCertificateRequest,
 ) (*protocol.IssueBlockchainCertificateReply, error) {
 	storageAdapter, err := dicontainer.GetStorageAdapter(s.cloudService, s.processEnv)
@@ -35,18 +35,18 @@ func (s issuingService) IssueBlockchainCertificate(
 	cmd := command.New()
 	pdfConverter := pdfconv.New(htmltopdf.New(cmd))
 
-	ci, err := certissuer.New(req.Issuer, req.ProcessId, req.Filename, storageAdapter, cmd, pdfConverter)
+	ci, err := certissuer.New(req.Issuer, req.ProcessId, storageAdapter, cmd, pdfConverter)
 	if err != nil {
 		logrus.WithError(err).Error("failed to build CertIssuer")
 		return nil, err
 	}
 
-	logrus.Infof("Start issuing process: %s %s %s", req.Issuer, req.ProcessId, req.Filename)
+	logrus.Infof("Start issuing process: %s %s", req.Issuer, req.ProcessId)
 	if err = ci.IssueCertificate(); err != nil {
 		logrus.WithError(err).Error("failed cert_issuer.IssueCertificate")
 		return nil, err
 	}
-	logrus.Infof("Finish issuing process: %s %s %s", req.Issuer, req.ProcessId, req.Filename)
+	logrus.Infof("Finish issuing process: %s %s", req.Issuer, req.ProcessId)
 
 	return &protocol.IssueBlockchainCertificateReply{}, nil
 }

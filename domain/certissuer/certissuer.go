@@ -11,10 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	ErrFilenameEmpty = errors.New("filename couldn't be empty")
-	ErrNoConfig      = errors.New("configuration file is not exists")
-)
+var ErrNoConfig = errors.New("configuration file is not exists")
 
 type (
 	// A CertIssuer for issuing the blockchain certificates
@@ -36,7 +33,6 @@ type (
 type certIssuer struct {
 	issuer         string
 	processId      string
-	filename       string
 	storageAdapter StorageAdapter
 	command        Command
 	pdfConverter   pdfconv.PdfConverter
@@ -44,18 +40,14 @@ type certIssuer struct {
 
 // New a certIssuer constructor
 func New(
-	issuer, processId, filename string,
+	issuer, processId string,
 	storageAdapter StorageAdapter,
 	command Command,
 	pdfConverter pdfconv.PdfConverter,
 ) (CertIssuer, error) {
-	if filename == "" {
-		return nil, errors.New("filename couldn't be empty")
-	}
 	return &certIssuer{
 		issuer:         issuer,
 		processId:      processId,
-		filename:       filename,
 		storageAdapter: storageAdapter,
 		command:        command,
 		pdfConverter:   pdfConverter,
@@ -63,12 +55,7 @@ func New(
 }
 
 func (i *certIssuer) IssueCertificate() error {
-	if i.filename == "" {
-		return ErrFilenameEmpty
-	}
-
-	confPath := path.ConfigsFilepath(i.issuer, i.filename)
-	// FIXME: this method remove only one file in the case of bulk issuing
+	confPath := path.IssuerConfigPath(i.issuer, i.processId)
 	defer os.Remove(confPath)
 
 	if !filesystem.FileExists(confPath) {
@@ -108,7 +95,7 @@ func (i *certIssuer) storeAllCerts(dir string) error {
 	}
 
 	for _, file := range files {
-		return i.storageAdapter.StoreCerts(file.Path, i.issuer, i.filename)
+		return i.storageAdapter.StoreCerts(file.Path, i.issuer, file.Info.Name())
 	}
 
 	return nil

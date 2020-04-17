@@ -8,8 +8,7 @@ service IssuingService {
 
 message IssueBlockchainCertificateRequest {
     string Issuer = 1;
-    string Filename = 2;
-    string ProcessId = 3;
+    string ProcessId = 2;
 }
 
 message IssueBlockchainCertificateReply{}
