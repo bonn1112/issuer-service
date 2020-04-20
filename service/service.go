@@ -2,6 +2,9 @@ package service
 
 import (
 	"context"
+	"os"
+
+	"github.com/lastrust/issuing-service/utils/path"
 
 	"github.com/lastrust/issuing-service/domain/certissuer"
 	"github.com/lastrust/issuing-service/domain/pdfconv"
@@ -26,6 +29,8 @@ func (s issuingService) IssueBlockchainCertificate(
 	_ context.Context,
 	req *protocol.IssueBlockchainCertificateRequest,
 ) (*protocol.IssueBlockchainCertificateReply, error) {
+	defer os.RemoveAll(path.UnsignedCertificatesDir(req.Issuer, req.ProcessId))
+
 	storageAdapter, err := dicontainer.GetStorageAdapter(s.cloudService, s.processEnv)
 	if err != nil {
 		logrus.WithError(err).Error("failed to build StorageAdapter")
