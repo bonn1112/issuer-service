@@ -3,7 +3,7 @@ package command
 import (
 	"os/exec"
 
-	"github.com/sirupsen/logrus"
+	"github.com/lastrust/utils-go/logging"
 )
 
 type Command struct {
@@ -21,7 +21,7 @@ func (Command) IssueBlockchainCertificate(confPath string) ([]byte, error) {
 		"make", "issue",
 		"CONF_PATH="+confPath,
 	)
-	logrus.Debugf("[EXECUTE] cmd: %s\n", cmd.String())
+	logging.Out().Debugf("[EXECUTE] cmd: %s\n", cmd.String())
 	return cmd.Output()
 }
 
@@ -32,6 +32,6 @@ func (c *Command) HtmlToPdf(htmlFilepath, pdfFilepath string) ([]byte, error) {
 		"HTML_FILEPATH="+htmlFilepath,
 		"PDF_FILEPATH="+pdfFilepath,
 	)
-	logrus.Debugf("[EXECUTE] cmd: %s\n", cmd.String())
+	logging.Out().Debugf("[EXECUTE] cmd: %s\n", cmd.String())
 	return cmd.Output()
 }

@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"github.com/lastrust/issuing-service/domain/pdfconv"
-	"github.com/sirupsen/logrus"
+	"github.com/lastrust/utils-go/logging"
 )
 
 var (
@@ -85,6 +85,6 @@ func (htp *HtmlToPdf) ExecPdfGenCommand(htmlFilepath, pdfFilepath string) error 
 	if err != nil {
 		return fmt.Errorf("error command.HtmlToPdf execution, %#v", err)
 	}
-	logrus.Debugf("[EXECUTE] command.HtmlToPdf, out: %s\n", string(out))
+	logging.Out().Debugf("[EXECUTE] command.HtmlToPdf, out: %s\n", string(out))
 	return nil
 }
