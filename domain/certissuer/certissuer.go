@@ -74,10 +74,7 @@ func (i *certIssuer) IssueCertificate() error {
 	logrus.Debugf("[EXECUTE] command.IssueBlockchainCertificate, out: %s\n", string(out))
 
 	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
-	defer func() {
-		os.RemoveAll(path.UnsignedCertificatesDir(i.issuer, i.processId))
-		os.RemoveAll(bcCertsDir)
-	}()
+	defer os.RemoveAll(bcCertsDir)
 
 	err = i.storeAllCerts(bcCertsDir)
 	if err != nil {
