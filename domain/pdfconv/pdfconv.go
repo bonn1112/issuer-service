@@ -8,7 +8,7 @@ import (
 
 type (
 	PdfConverter interface {
-		HtmlToPdf(issuer, filename string) error
+		HtmlToPdf(issuer, processId, filename string) error
 	}
 
 	Command interface {
@@ -26,9 +26,9 @@ type pdfConverter struct {
 	htmltopdf HtmlToPdf
 }
 
-func (c *pdfConverter) HtmlToPdf(issuer, filename string) (err error) {
+func (c *pdfConverter) HtmlToPdf(issuer, processId, filename string) (err error) {
 	var (
-		certificatePath  = path.UnsignedCertificateFilepath(issuer, filename)
+		certificatePath  = path.UnsignedCertificateFilepath(issuer, processId, filename)
 		tempHtmlFilepath = path.HtmlTempFilepath(issuer, filename)
 		pdfFilepath      = path.PdfFilepath(issuer, filename)
 	)

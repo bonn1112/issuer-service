@@ -11,10 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	ErrFilenameEmpty = errors.New("filename couldn't be empty")
-	ErrNoConfig      = errors.New("configuration file is not exists")
-)
+var ErrNoConfig = errors.New("configuration file is not exists")
 
 type (
 	// A CertIssuer for issuing the blockchain certificates
@@ -35,7 +32,7 @@ type (
 
 type certIssuer struct {
 	issuer         string
-	filename       string
+	processId      string
 	storageAdapter StorageAdapter
 	command        Command
 	pdfConverter   pdfconv.PdfConverter
@@ -43,17 +40,14 @@ type certIssuer struct {
 
 // New a certIssuer constructor
 func New(
-	issuer, filename string,
+	issuer, processId string,
 	storageAdapter StorageAdapter,
 	command Command,
 	pdfConverter pdfconv.PdfConverter,
 ) (CertIssuer, error) {
-	if filename == "" {
-		return nil, errors.New("filename couldn't be empty")
-	}
 	return &certIssuer{
 		issuer:         issuer,
-		filename:       filename,
+		processId:      processId,
 		storageAdapter: storageAdapter,
 		command:        command,
 		pdfConverter:   pdfConverter,
@@ -61,12 +55,7 @@ func New(
 }
 
 func (i *certIssuer) IssueCertificate() error {
-	if i.filename == "" {
-		return ErrFilenameEmpty
-	}
-
-	confPath := path.ConfigsFilepath(i.issuer, i.filename)
-	// FIXME: this method remove only one file in the case of bulk issuing
+	confPath := path.IssuerConfigPath(i.issuer, i.processId)
 	defer os.Remove(confPath)
 
 	if !filesystem.FileExists(confPath) {
@@ -85,11 +74,7 @@ func (i *certIssuer) IssueCertificate() error {
 	logrus.Debugf("[EXECUTE] command.IssueBlockchainCertificate, out: %s\n", string(out))
 
 	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
-	// TODO: Uncomment after update the upload functions
-	// defer func() {
-	// 	os.RemoveAll(path.UnsignedCertificatesDir(i.issuer))
-	// 	os.RemoveAll(bcCertsDir)
-	// }()
+	defer os.RemoveAll(bcCertsDir)
 
 	err = i.storeAllCerts(bcCertsDir)
 	if err != nil {
@@ -106,7 +91,7 @@ func (i *certIssuer) storeAllCerts(dir string) error {
 	}
 
 	for _, file := range files {
-		return i.storageAdapter.StoreCerts(file.Path, i.issuer, i.filename)
+		return i.storageAdapter.StoreCerts(file.Path, i.issuer, file.Info.Name())
 	}
 
 	return nil

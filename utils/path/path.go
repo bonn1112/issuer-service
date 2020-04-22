@@ -4,8 +4,8 @@ import "fmt"
 
 var dataDir = "/storage/data/"
 
-func ConfigsFilepath(issuer, filename string) string {
-	return fmt.Sprintf("%s%s/configs/%s.ini", dataDir, issuer, filename)
+func IssuerConfigPath(issuer, processId string) string {
+	return fmt.Sprintf("%s%s/issuer-configs/%s.ini", dataDir, issuer, processId)
 }
 
 func HtmlTempFilepath(issuer, filename string) string {
@@ -16,12 +16,12 @@ func PdfFilepath(issuer, filename string) string {
 	return fmt.Sprintf("%s%s/pdf/%s.pdf", dataDir, issuer, filename)
 }
 
-func UnsignedCertificatesDir(issuer string) string {
-	return fmt.Sprintf("%s%s/unsigned_certificates/", dataDir, issuer)
+func UnsignedCertificatesDir(issuer, processId string) string {
+	return fmt.Sprintf("%s%s/unsigned_certificates/%s/", dataDir, issuer, processId)
 }
 
-func UnsignedCertificateFilepath(issuer, filename string) string {
-	return fmt.Sprintf("%s%s.json", UnsignedCertificatesDir(issuer), filename)
+func UnsignedCertificateFilepath(issuer, processId, filename string) string {
+	return fmt.Sprintf("%s%s.json", UnsignedCertificatesDir(issuer, processId), filename)
 }
 
 func BlockchainCertificatesDir(issuer string) string {
