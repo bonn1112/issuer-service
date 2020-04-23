@@ -75,7 +75,7 @@ func (i *certIssuer) IssueCertificate() error {
 		if ee, ok := err.(*exec.ExitError); ok {
 			logging.Err().WithFields(cmdField).WithField("stderr", string(ee.Stderr)).Debug("[EXECUTE]")
 		}
-		return fmt.Errorf("error command.IssueBlockchainCertificate execution, %#v", err)
+		return fmt.Errorf("error command.IssueBlockchainCertificate execution, %s", err.Error())
 	}
 	logging.Out().WithFields(cmdField).WithField("stdout", string(out)).Debug("[EXECUTE]")
 

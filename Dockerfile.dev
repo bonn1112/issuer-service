@@ -1,11 +1,9 @@
 # Build Go application
 FROM golang:1.13.6-alpine3.10 as builder
-COPY ./issuing-service /app
+
+ADD ./issuing-service /app
 WORKDIR /app
 RUN go build -mod=vendor -o /main /app/main.go
-
-# Make blockchain env
-FROM alpine:3.10 as cli
 
 COPY ./issuing-service/pkg/cert-issuer /cert-issuer-cli
 COPY ./issuing-service/pkg/cert-issuer/conf_regtest.ini /etc/cert-issuer/conf.ini
@@ -57,10 +55,7 @@ RUN sed -i -e 's/v3.11/edge/g' /etc/apk/repositories \
 ENV CHROME_BIN /usr/bin/chromium-browser
 RUN npm ci
 
-WORKDIR /app
-COPY ./Makefile .
-COPY --from=builder /main .
-
 ADD ./storage /storage
 
-CMD [ "./main" ]
+WORKDIR /app
+CMD [ "/main" ]
