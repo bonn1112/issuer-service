@@ -12,7 +12,7 @@ type (
 	}
 
 	Command interface {
-		HtmlToPdf(htmlFilepath, pdfFilepath string) ([]byte, error)
+		HtmlToPdf(htmlFilepath, pdfFilepath string) error
 	}
 
 	HtmlToPdf interface {
