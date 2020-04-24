@@ -72,7 +72,7 @@ func (i *certIssuer) IssueCertificate() error {
 	}
 
 	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
-	defer os.RemoveAll(bcCertsDir)
+	//defer os.RemoveAll(bcCertsDir)
 
 	err = i.storeAllCerts(bcCertsDir)
 	if err != nil {
