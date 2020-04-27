@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 
+	"github.com/lastrust/utils-go/logging"
+
 	"github.com/lastrust/issuing-service/utils/path"
 
 	"github.com/lastrust/issuing-service/domain/certissuer"
@@ -12,7 +14,6 @@ import (
 	"github.com/lastrust/issuing-service/infra/htmltopdf"
 	"github.com/lastrust/issuing-service/protocol"
 	"github.com/lastrust/issuing-service/utils/dicontainer"
-	"github.com/sirupsen/logrus"
 )
 
 type issuingService struct {
@@ -33,7 +34,7 @@ func (s issuingService) IssueBlockchainCertificate(
 
 	storageAdapter, err := dicontainer.GetStorageAdapter(s.cloudService, s.processEnv)
 	if err != nil {
-		logrus.WithError(err).Error("failed to build StorageAdapter")
+		logging.Err().WithError(err).Error("failed to build StorageAdapter")
 		return nil, err
 	}
 
@@ -42,16 +43,16 @@ func (s issuingService) IssueBlockchainCertificate(
 
 	ci, err := certissuer.New(req.Issuer, req.ProcessId, storageAdapter, cmd, pdfConverter)
 	if err != nil {
-		logrus.WithError(err).Error("failed to build CertIssuer")
+		logging.Err().WithError(err).Error("failed to build CertIssuer")
 		return nil, err
 	}
 
-	logrus.Infof("Start issuing process: %s %s", req.Issuer, req.ProcessId)
+	logging.Out().Infof("Start issuing process: %s %s", req.Issuer, req.ProcessId)
 	if err = ci.IssueCertificate(); err != nil {
-		logrus.WithError(err).Error("failed cert_issuer.IssueCertificate")
+		logging.Err().WithError(err).Error("failed cert_issuer.IssueCertificate")
 		return nil, err
 	}
-	logrus.Infof("Finish issuing process: %s %s", req.Issuer, req.ProcessId)
+	logging.Out().Infof("Finish issuing process: %s %s", req.Issuer, req.ProcessId)
 
 	return &protocol.IssueBlockchainCertificateReply{}, nil
 }

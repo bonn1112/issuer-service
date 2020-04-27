@@ -2,6 +2,7 @@ package main
 
 import (
 	"net"
+	"os"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
@@ -9,6 +10,7 @@ import (
 	"github.com/lastrust/issuing-service/protocol"
 	"github.com/lastrust/issuing-service/service"
 	"github.com/lastrust/issuing-service/utils/env"
+	"github.com/lastrust/utils-go/logging"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -24,7 +26,7 @@ var (
 func main() {
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
-		logrus.WithError(err).Fatalln("failed to listen")
+		logging.Err().WithError(err).Fatalln("failed to listen")
 	}
 
 	logOpts := configureLogger()
@@ -33,32 +35,29 @@ func main() {
 	protocol.RegisterIssuingServiceServer(srv, service.New(cloudService, processEnv))
 
 	if processEnv == "dev" {
-		logrus.Info("reflection GRPC is registered")
+		logging.Out().Info("reflection GRPC is registered")
 		reflection.Register(srv)
 	}
 
-	logrus.Printf("Listening GRPC on %s", port)
+	logging.Out().Printf("Listening GRPC on %s", port)
 	if err = srv.Serve(lis); err != nil {
-		logrus.WithError(err).Fatalln("failed to serve")
+		logging.Err().WithError(err).Fatalln("failed to serve")
 	}
 }
 
 func configureLogger() []grpc.ServerOption {
-	logLevel, err := logrus.ParseLevel(logLevelString)
+	err := logging.Init(logLevelString, os.Stdout, os.Stderr)
 	if err != nil {
-		logrus.WithError(err).Fatalln("failed parse log level")
+		logging.Err().WithError(err).Fatalln("failed logging initialization")
 	}
-	logrus.Printf("Log level: %d %s", logLevel, logLevelString)
-
-	logger := logrus.New()
-	logger.Level = logLevel
+	logging.Out().Printf("logging level: %s\n", logLevelString)
 
 	return []grpc.ServerOption{
 		grpc_middleware.WithStreamServerChain(
 			grpc_ctxtags.StreamServerInterceptor(),
-			grpc_logrus.StreamServerInterceptor(logrus.NewEntry(logger))),
+			grpc_logrus.StreamServerInterceptor(logrus.NewEntry(logging.Out()))),
 		grpc_middleware.WithUnaryServerChain(
 			grpc_ctxtags.UnaryServerInterceptor(),
-			grpc_logrus.UnaryServerInterceptor(logrus.NewEntry(logger))),
+			grpc_logrus.UnaryServerInterceptor(logrus.NewEntry(logging.Out()))),
 	}
 }

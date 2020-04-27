@@ -10,7 +10,6 @@ import (
 	"os"
 
 	"github.com/lastrust/issuing-service/domain/pdfconv"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -81,10 +80,5 @@ func (htp *HtmlToPdf) CreateTempHtmlTemplate(html interface{}, htmlFilepath stri
 }
 
 func (htp *HtmlToPdf) ExecPdfGenCommand(htmlFilepath, pdfFilepath string) error {
-	out, err := htp.Command.HtmlToPdf(htmlFilepath, pdfFilepath)
-	if err != nil {
-		return fmt.Errorf("error command.HtmlToPdf execution, %#v", err)
-	}
-	logrus.Debugf("[EXECUTE] command.HtmlToPdf, out: %s\n", string(out))
-	return nil
+	return htp.Command.HtmlToPdf(htmlFilepath, pdfFilepath)
 }

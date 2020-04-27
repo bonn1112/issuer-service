@@ -8,7 +8,6 @@ import (
 	"github.com/lastrust/issuing-service/domain/pdfconv"
 	"github.com/lastrust/issuing-service/utils/filesystem"
 	"github.com/lastrust/issuing-service/utils/path"
-	"github.com/sirupsen/logrus"
 )
 
 var ErrNoConfig = errors.New("configuration file is not exists")
@@ -26,7 +25,7 @@ type (
 	}
 
 	Command interface {
-		IssueBlockchainCertificate(confPath string) ([]byte, error)
+		IssueBlockchainCertificate(confPath string) error
 	}
 )
 
@@ -67,14 +66,13 @@ func (i *certIssuer) IssueCertificate() error {
 	// 	return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
 	// }
 
-	out, err := i.command.IssueBlockchainCertificate(confPath)
+	err := i.command.IssueBlockchainCertificate(confPath)
 	if err != nil {
-		return fmt.Errorf("error command.IssueBlockchainCertificate execution, %#v", err)
+		return err
 	}
-	logrus.Debugf("[EXECUTE] command.IssueBlockchainCertificate, out: %s\n", string(out))
 
 	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
-	defer os.RemoveAll(bcCertsDir)
+	//defer os.RemoveAll(bcCertsDir)
 
 	err = i.storeAllCerts(bcCertsDir)
 	if err != nil {

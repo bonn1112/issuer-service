@@ -1,9 +1,10 @@
 package command
 
 import (
+	"os"
 	"os/exec"
 
-	"github.com/sirupsen/logrus"
+	"github.com/lastrust/utils-go/logging"
 )
 
 type Command struct {
@@ -16,27 +17,28 @@ func New() *Command {
 	}
 }
 
-func (Command) IssueBlockchainCertificate(confPath string) ([]byte, error) {
-	// cmd := exec.Command(
-	// 	"make", "issue",
-	// 	"CONF_PATH="+confPath,
-	// )
-	cmd := exec.Command(
-		"/usr/bin/cert-issuer",
-		"-c",
-		confPath,
-	)
-	logrus.Debugf("[EXECUTE] cmd: %s\n", cmd.String())
-	return cmd.Output()
+func (Command) IssueBlockchainCertificate(confPath string) error {
+	return run(exec.Command(
+		"make", "issue",
+		"CONF_PATH="+confPath,
+	))
 }
 
-func (c *Command) HtmlToPdf(htmlFilepath, pdfFilepath string) ([]byte, error) {
-	cmd := exec.Command(
+func (c *Command) HtmlToPdf(htmlFilepath, pdfFilepath string) error {
+	return run(exec.Command(
 		"make", "htmltopdf",
 		"CHROME_BIN="+c.ChromeBin,
 		"HTML_FILEPATH="+htmlFilepath,
 		"PDF_FILEPATH="+pdfFilepath,
-	)
-	logrus.Debugf("[EXECUTE] cmd: %s\n", cmd.String())
-	return cmd.Output()
+	))
+}
+
+func run(cmd *exec.Cmd) error {
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+
+	logging.Out().
+		WithField("cmd", cmd.String()).
+		Debug("[EXECUTE]")
+
+	return cmd.Run()
 }
