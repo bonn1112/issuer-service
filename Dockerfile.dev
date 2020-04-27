@@ -1,7 +1,7 @@
 # Build Go application
 FROM golang:1.13.6-alpine3.10 as builder
 
-ADD ./issuing-service /app
+COPY ./issuing-service /app
 WORKDIR /app
 RUN go build -mod=vendor -o /main /app/main.go
 
@@ -55,7 +55,7 @@ RUN sed -i -e 's/v3.11/edge/g' /etc/apk/repositories \
 ENV CHROME_BIN /usr/bin/chromium-browser
 RUN npm ci
 
-ADD ./storage /storage
+COPY ./storage /storage
 
 WORKDIR /app
 CMD [ "/main" ]
