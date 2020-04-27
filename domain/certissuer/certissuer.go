@@ -72,10 +72,7 @@ func (i *certIssuer) IssueCertificate() error {
 	}
 
 	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
-	// FIXME: necessary create a separate blockchain certificate directory
-	// 	with process id not common
-	// 	because it's may duplicate a certificates if we running multiple requests
-	defer os.RemoveAll(bcCertsDir)
+	//defer os.RemoveAll(bcCertsDir)
 
 	err = i.storeAllCerts(bcCertsDir)
 	if err != nil {
@@ -92,11 +89,7 @@ func (i *certIssuer) storeAllCerts(dir string) error {
 	}
 
 	for _, file := range files {
-		// TODO: rewrite to running as goroutine
-		err = i.storageAdapter.StoreCerts(file.Path, i.issuer, file.Info.Name())
-		if err != nil {
-			return err
-		}
+		return i.storageAdapter.StoreCerts(file.Path, i.issuer, file.Info.Name())
 	}
 
 	return nil

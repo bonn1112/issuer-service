@@ -54,5 +54,10 @@ func (s *gcsAdapter) StoreCerts(filepath string, issuer string, filename string)
 		return err
 	}
 
-	return w.Close()
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+
+	return
 }
