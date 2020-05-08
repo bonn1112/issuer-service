@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/storage v1.6.0
 	github.com/golang/protobuf v1.4.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0
+	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/lastrust/utils-go/logging v0.0.0-20200422113219-ff3af1ec4c9a
 	github.com/sirupsen/logrus v1.5.0

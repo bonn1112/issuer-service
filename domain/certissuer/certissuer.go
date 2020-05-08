@@ -1,13 +1,18 @@
 package certissuer
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
+	"time"
 
+	"github.com/lastrust/issuing-service/domain/cert"
 	"github.com/lastrust/issuing-service/domain/pdfconv"
 	"github.com/lastrust/issuing-service/utils/filesystem"
 	"github.com/lastrust/issuing-service/utils/path"
+	"github.com/lastrust/issuing-service/utils/str"
 )
 
 var ErrNoConfig = errors.New("configuration file is not exists")
@@ -17,7 +22,7 @@ type (
 	CertIssuer interface {
 		// IssueCertificate using the unsigned certificate with configuration file
 		// for issuing a blockchain certificate
-		IssueCertificate() error
+		IssueCertificate(context.Context) error
 	}
 
 	StorageAdapter interface {
@@ -31,29 +36,34 @@ type (
 
 type certIssuer struct {
 	issuer         string
+	issuerId       string
 	processId      string
 	storageAdapter StorageAdapter
 	command        Command
 	pdfConverter   pdfconv.PdfConverter
+	certRepo       cert.Repository
 }
 
 // New a certIssuer constructor
 func New(
-	issuer, processId string,
+	issuer, issuerId, processId string,
 	storageAdapter StorageAdapter,
 	command Command,
 	pdfConverter pdfconv.PdfConverter,
+	certRepo cert.Repository,
 ) (CertIssuer, error) {
 	return &certIssuer{
 		issuer:         issuer,
+		issuerId:       issuerId,
 		processId:      processId,
 		storageAdapter: storageAdapter,
 		command:        command,
 		pdfConverter:   pdfConverter,
+		certRepo:       certRepo,
 	}, nil
 }
 
-func (i *certIssuer) IssueCertificate() error {
+func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 	confPath := path.IssuerConfigPath(i.issuer, i.processId)
 	defer os.Remove(confPath)
 
@@ -77,7 +87,7 @@ func (i *certIssuer) IssueCertificate() error {
 	// 	because it's may duplicate a certificates if we running multiple requests
 	defer os.RemoveAll(bcCertsDir)
 
-	err = i.storeAllCerts(bcCertsDir)
+	err = i.storeAllCerts(ctx, bcCertsDir)
 	if err != nil {
 		return fmt.Errorf("failed certIssuer.storeAllCerts, %v", err)
 	}
@@ -85,10 +95,18 @@ func (i *certIssuer) IssueCertificate() error {
 	return nil
 }
 
-func (i *certIssuer) storeAllCerts(dir string) error {
+func (i *certIssuer) storeAllCerts(ctx context.Context, dir string) error {
 	files, err := filesystem.GetFiles(dir)
 	if err != nil {
 		return err
+	}
+
+	var certs []*cert.Cert
+	var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	var authorizeRequired bool
+	// TODO: specify the name, now it's hardcode :(
+	if i.issuer == "OrixBank" {
+		authorizeRequired = true
 	}
 
 	for _, file := range files {
@@ -97,7 +115,15 @@ func (i *certIssuer) storeAllCerts(dir string) error {
 		if err != nil {
 			return err
 		}
+
+		certs = append(certs, &cert.Cert{
+			Uuid:              filesystem.TrimExt(file.Info.Name()),
+			Password:          str.Random(seededRand, 16),
+			AuthorizeRequired: authorizeRequired,
+			IssuerId:          i.issuerId,
+			IssuingProcessId:  i.processId,
+		})
 	}
 
-	return nil
+	return i.certRepo.BulkCreate(ctx, certs)
 }
