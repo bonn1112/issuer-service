@@ -2,3 +2,5 @@
 
 # go dependencies
 vendor
+
+tmp
