@@ -10,5 +10,5 @@ type Issuer struct {
 }
 
 type Repository interface {
-	FirstByName(name string) (*Issuer, error)
+	FirstByUuid(uuid string) (*Issuer, error)
 }

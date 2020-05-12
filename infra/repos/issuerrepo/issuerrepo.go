@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	queryFirstByName = `SELECT uuid, name, updated_at, created_at
+	queryFirstByUuid = `SELECT uuid, name, updated_at, created_at
 FROM issuers
-WHERE name=$2
+WHERE uuid=$1
 LIMIT 1;`
 )
 
@@ -21,10 +21,10 @@ func New(db *sql.DB) issuer.Repository {
 	return &repo{db}
 }
 
-func (r *repo) FirstByName(name string) (*issuer.Issuer, error) {
+func (r *repo) FirstByUuid(uuid string) (*issuer.Issuer, error) {
 	var i issuer.Issuer
 
-	err := r.db.QueryRow(queryFirstByName, name).
+	err := r.db.QueryRow(queryFirstByUuid, uuid).
 		Scan(&i.Uuid, &i.Name, &i.UpdatedAt, &i.CreatedAt)
 	return &i, err
 }

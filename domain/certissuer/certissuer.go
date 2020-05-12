@@ -35,7 +35,6 @@ type (
 )
 
 type certIssuer struct {
-	issuer         string
 	issuerId       string
 	processId      string
 	storageAdapter StorageAdapter
@@ -46,14 +45,13 @@ type certIssuer struct {
 
 // New a certIssuer constructor
 func New(
-	issuer, issuerId, processId string,
+	issuerId, processId string,
 	storageAdapter StorageAdapter,
 	command Command,
 	pdfConverter pdfconv.PdfConverter,
 	certRepo cert.Repository,
 ) (CertIssuer, error) {
 	return &certIssuer{
-		issuer:         issuer,
 		issuerId:       issuerId,
 		processId:      processId,
 		storageAdapter: storageAdapter,
@@ -64,7 +62,7 @@ func New(
 }
 
 func (i *certIssuer) IssueCertificate(ctx context.Context) error {
-	confPath := path.IssuerConfigPath(i.issuer, i.processId)
+	confPath := path.IssuerConfigPath(i.issuerId, i.processId)
 	defer os.Remove(confPath)
 
 	if !filesystem.FileExists(confPath) {
@@ -81,7 +79,7 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 		return err
 	}
 
-	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
+	bcCertsDir := path.BlockchainCertificatesDir(i.issuerId)
 	// FIXME: necessary create a separate blockchain certificate directory
 	// 	with process id not common
 	// 	because it's may duplicate a certificates if we running multiple requests
@@ -95,6 +93,8 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 	return nil
 }
 
+const OrixUuid = "eee2bdaa-6927-4162-aa62-285976286d2f"
+
 func (i *certIssuer) storeAllCerts(ctx context.Context, dir string) error {
 	files, err := filesystem.GetFiles(dir)
 	if err != nil {
@@ -103,15 +103,16 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, dir string) error {
 
 	var certs []*cert.Cert
 	var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
 	var authorizeRequired bool
-	// TODO: specify the name, now it's hardcode :(
-	if i.issuer == "OrixBank" {
+	// TODO: specify the uuid, now it's hardcode :(
+	if i.issuerId == OrixUuid {
 		authorizeRequired = true
 	}
 
 	for _, file := range files {
 		// TODO: rewrite to running as goroutine
-		err = i.storageAdapter.StoreCerts(file.Path, i.issuer, file.Info.Name())
+		err = i.storageAdapter.StoreCerts(file.Path, i.issuerId, file.Info.Name())
 		if err != nil {
 			return err
 		}

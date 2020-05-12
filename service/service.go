@@ -39,11 +39,11 @@ func (s issuingService) IssueBlockchainCertificate(
 	ctx context.Context,
 	req *protocol.IssueBlockchainCertificateRequest,
 ) (*protocol.IssueBlockchainCertificateReply, error) {
-	defer os.RemoveAll(path.UnsignedCertificatesDir(req.Issuer, req.ProcessId))
+	defer os.RemoveAll(path.UnsignedCertificatesDir(req.IssuerId, req.ProcessId))
 
-	i, err := s.issuerRepo.FirstByName(req.Issuer)
+	_, err := s.issuerRepo.FirstByUuid(req.IssuerId)
 	if err != nil {
-		logging.Err().WithError(err).Errorf("error in db request firstByName in issuer repo with name %s", req.Issuer)
+		logging.Err().WithError(err).Errorf("error in db request firstByName in issuer repo with name %s", req.IssuerId)
 		return nil, err
 	}
 
@@ -57,7 +57,7 @@ func (s issuingService) IssueBlockchainCertificate(
 	pdfConverter := pdfconv.New(htmltopdf.New(cmd))
 
 	ci, err := certissuer.New(
-		req.Issuer, i.Uuid, req.ProcessId,
+		req.IssuerId, req.ProcessId,
 		storageAdapter,
 		cmd,
 		pdfConverter,
@@ -68,12 +68,12 @@ func (s issuingService) IssueBlockchainCertificate(
 		return nil, err
 	}
 
-	logging.Out().Infof("Start issuing process: %s %s", req.Issuer, req.ProcessId)
+	logging.Out().Infof("Start issuing process: %s %s", req.IssuerId, req.ProcessId)
 	if err = ci.IssueCertificate(ctx); err != nil {
 		logging.Err().WithError(err).Error("failed cert_issuer.IssueCertificate")
 		return nil, err
 	}
-	logging.Out().Infof("Finish issuing process: %s %s", req.Issuer, req.ProcessId)
+	logging.Out().Infof("Finish issuing process: %s %s", req.IssuerId, req.ProcessId)
 
 	return &protocol.IssueBlockchainCertificateReply{}, nil
 }
