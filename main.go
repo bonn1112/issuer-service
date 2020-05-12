@@ -19,7 +19,7 @@ import (
 var (
 	processEnv     = env.GetDefault("PROCESS_ENV", "dev")
 	logLevelString = env.GetDefault("LOG_LEVEL", "info")
-	cloudService   = env.GetDefault("CLOUD_SERVICE", "gcp")
+	cloudService   = env.GetDefault("CLOUD_SERVICE", "aws")
 	port           = ":8080"
 )
 

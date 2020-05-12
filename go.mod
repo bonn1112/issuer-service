@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	cloud.google.com/go/storage v1.6.0
+	github.com/aws/aws-sdk-go v1.30.22
 	github.com/golang/protobuf v1.4.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect

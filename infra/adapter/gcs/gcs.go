@@ -1,4 +1,4 @@
-package infra
+package gcs
 
 import (
 	"context"
@@ -17,7 +17,7 @@ type gcsAdapter struct {
 	bucket string
 }
 
-func NewGcsAdapter(processEnv string) (*gcsAdapter, error) {
+func New(processEnv string) (*gcsAdapter, error) {
 	var bucket string
 	switch processEnv {
 	case "dev":

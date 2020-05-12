@@ -31,3 +31,7 @@ func BlockchainCertificatesDir(issuer string) string {
 func CertsPathInGCS(issuer, filename string) string {
 	return fmt.Sprintf("%s/blockchain_certificates/%s", issuer, filename)
 }
+
+func CertsPathInS3(issuer, filename string) string {
+	return fmt.Sprintf("%s/%s", issuer, filename)
+}
