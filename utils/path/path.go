@@ -5,7 +5,7 @@ import "fmt"
 var dataDir = "/storage/data/"
 
 func IssuerConfigPath(issuerId, processId string) string {
-	return fmt.Sprintf("%s%s/issuerId-configs/%s.ini", dataDir, issuerId, processId)
+	return fmt.Sprintf("%s%s/issuer-configs/%s.ini", dataDir, issuerId, processId)
 }
 
 func HtmlTempFilepath(issuerId, certId string) string {

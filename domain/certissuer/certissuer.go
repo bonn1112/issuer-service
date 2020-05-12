@@ -83,7 +83,10 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 	// FIXME: necessary create a separate blockchain certificate directory
 	// 	with process id not common
 	// 	because it's may duplicate a certificates if we running multiple requests
-	defer os.RemoveAll(bcCertsDir)
+	defer func() {
+		os.RemoveAll(bcCertsDir)
+		os.Mkdir(bcCertsDir, 0755)
+	}()
 
 	err = i.storeAllCerts(ctx, bcCertsDir)
 	if err != nil {

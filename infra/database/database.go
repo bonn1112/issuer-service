@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/lastrust/issuing-service/env"
+	_ "github.com/lib/pq"
 )
 
 func Open(conf env.DB) (*sql.DB, error) {

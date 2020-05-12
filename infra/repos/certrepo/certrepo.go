@@ -9,7 +9,7 @@ import (
 
 const (
 	queryCreate = `INSERT INTO certificates
-(uuid, password, authorize_password, issuer_id, issuing_process_id)
+(uuid, password, authorize_required, issuer_id, issuing_process_id)
 VALUES ($1, $2, $3, $4, $5);`
 )
 
