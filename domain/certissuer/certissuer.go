@@ -66,18 +66,18 @@ func (i *certIssuer) IssueCertificate() error {
 	// 	return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
 	// }
 
+	bcProcessDir := path.BlockcertsProcessDir(i.issuer, i.processId)
+	if !filesystem.FileExists(bcProcessDir) {
+		_ = os.MkdirAll(bcProcessDir, 0755)
+	}
+	defer os.RemoveAll(bcProcessDir)
+
 	err := i.command.IssueBlockchainCertificate(confPath)
 	if err != nil {
 		return err
 	}
 
-	bcCertsDir := path.BlockchainCertificatesDir(i.issuer)
-	// FIXME: necessary create a separate blockchain certificate directory
-	// 	with process id not common
-	// 	because it's may duplicate a certificates if we running multiple requests
-	// defer os.RemoveAll(bcCertsDir)
-
-	err = i.storeAllCerts(bcCertsDir)
+	err = i.storeAllCerts(bcProcessDir)
 	if err != nil {
 		return fmt.Errorf("failed certIssuer.storeAllCerts, %v", err)
 	}

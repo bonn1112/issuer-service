@@ -24,8 +24,8 @@ func UnsignedCertificateFilepath(issuer, processId, filename string) string {
 	return fmt.Sprintf("%s%s.json", UnsignedCertificatesDir(issuer, processId), filename)
 }
 
-func BlockchainCertificatesDir(issuer string) string {
-	return fmt.Sprintf("%s%s/blockchain_certificates/", dataDir, issuer)
+func BlockcertsProcessDir(issuer, processId string) string {
+	return fmt.Sprintf("%s%s/blockchain_certificates/%s/", dataDir, issuer, processId)
 }
 
 func CertsPathInGCS(issuer, filename string) string {
