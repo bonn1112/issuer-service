@@ -8,11 +8,11 @@ import (
 	"github.com/lastrust/issuing-service/domain/certissuer"
 	"github.com/lastrust/issuing-service/domain/issuer"
 	"github.com/lastrust/issuing-service/domain/pdfconv"
-	"github.com/lastrust/issuing-service/env"
 	"github.com/lastrust/issuing-service/infra/command"
 	"github.com/lastrust/issuing-service/infra/htmltopdf"
 	"github.com/lastrust/issuing-service/protocol"
 	"github.com/lastrust/issuing-service/utils/dicontainer"
+	"github.com/lastrust/issuing-service/utils/env"
 	"github.com/lastrust/issuing-service/utils/path"
 	"github.com/lastrust/utils-go/logging"
 )

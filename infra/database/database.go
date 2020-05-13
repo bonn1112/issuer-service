@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/lastrust/issuing-service/env"
+	"github.com/lastrust/issuing-service/utils/env"
 	_ "github.com/lib/pq"
 )
 
