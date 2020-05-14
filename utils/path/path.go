@@ -4,30 +4,30 @@ import "fmt"
 
 var dataDir = "/storage/data/"
 
-func IssuerConfigPath(issuer, processId string) string {
-	return fmt.Sprintf("%s%s/issuer-configs/%s.ini", dataDir, issuer, processId)
+func IssuerConfigPath(issuerId, processId string) string {
+	return fmt.Sprintf("%s%s/issuer-configs/%s.ini", dataDir, issuerId, processId)
 }
 
-func HtmlTempFilepath(issuer, filename string) string {
-	return fmt.Sprintf("%s%s/html_tmp/%s.html", dataDir, issuer, filename)
+func HtmlTempFilepath(issuerId, certId string) string {
+	return fmt.Sprintf("%s%s/html_tmp/%s.html", dataDir, issuerId, certId)
 }
 
-func PdfFilepath(issuer, filename string) string {
-	return fmt.Sprintf("%s%s/pdf/%s.pdf", dataDir, issuer, filename)
+func PdfFilepath(issuerId, certId string) string {
+	return fmt.Sprintf("%s%s/pdf/%s.pdf", dataDir, issuerId, certId)
 }
 
-func UnsignedCertificatesDir(issuer, processId string) string {
-	return fmt.Sprintf("%s%s/unsigned_certificates/%s/", dataDir, issuer, processId)
+func UnsignedCertificatesDir(issuerId, processId string) string {
+	return fmt.Sprintf("%s%s/unsigned_certificates/%s/", dataDir, issuerId, processId)
 }
 
-func UnsignedCertificateFilepath(issuer, processId, filename string) string {
-	return fmt.Sprintf("%s%s.json", UnsignedCertificatesDir(issuer, processId), filename)
+func UnsignedCertificateFilepath(issuerId, processId, certId string) string {
+	return fmt.Sprintf("%s%s.json", UnsignedCertificatesDir(issuerId, processId), certId)
 }
 
-func BlockchainCertificatesDir(issuer string) string {
-	return fmt.Sprintf("%s%s/blockchain_certificates/", dataDir, issuer)
+func BlockchainCertificatesDir(issuerId string) string {
+	return fmt.Sprintf("%s%s/blockchain_certificates/", dataDir, issuerId)
 }
 
-func CertsPathInGCS(issuer, filename string) string {
-	return fmt.Sprintf("%s/blockchain_certificates/%s", issuer, filename)
+func CertsPathInGCS(issuerId, certId string) string {
+	return fmt.Sprintf("%s/blockchain_certificates/%s", issuerId, certId)
 }

@@ -7,6 +7,10 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_logrus "github.com/grpc-ecosystem/go-grpc-middleware/logging/logrus"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	"github.com/kelseyhightower/envconfig"
+	"github.com/lastrust/issuing-service/infra/database"
+	"github.com/lastrust/issuing-service/infra/repos/certrepo"
+	"github.com/lastrust/issuing-service/infra/repos/issuerrepo"
 	"github.com/lastrust/issuing-service/protocol"
 	"github.com/lastrust/issuing-service/service"
 	"github.com/lastrust/issuing-service/utils/env"
@@ -16,41 +20,45 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-var (
-	processEnv     = env.GetDefault("PROCESS_ENV", "dev")
-	logLevelString = env.GetDefault("LOG_LEVEL", "info")
-	cloudService   = env.GetDefault("CLOUD_SERVICE", "gcp")
-	port           = ":8080"
-)
-
 func main() {
-	lis, err := net.Listen("tcp", port)
+	var conf env.Config
+	if err := envconfig.Process("", &conf); err != nil {
+		logging.Err().Fatal(err)
+	}
+
+	lis, err := net.Listen("tcp", conf.ServerAddr)
 	if err != nil {
 		logging.Err().WithError(err).Fatalln("failed to listen")
 	}
 
-	logOpts := configureLogger()
-
+	logOpts := configureLogger(conf.LogLevel)
 	srv := grpc.NewServer(logOpts...)
-	protocol.RegisterIssuingServiceServer(srv, service.New(cloudService, processEnv))
 
-	if processEnv == "dev" {
+	db, err := database.Open(conf.DB)
+	if err != nil {
+		logging.Err().WithError(err).Fatalln("error database initialization")
+	}
+	svc := service.New(conf.Service, issuerrepo.New(db), certrepo.New(db))
+
+	protocol.RegisterIssuingServiceServer(srv, svc)
+
+	if conf.Service.ProcessEnv == "dev" {
 		logging.Out().Info("reflection GRPC is registered")
 		reflection.Register(srv)
 	}
 
-	logging.Out().Printf("Listening GRPC on %s", port)
+	logging.Out().Printf("Listening GRPC on %s", conf.ServerAddr)
 	if err = srv.Serve(lis); err != nil {
 		logging.Err().WithError(err).Fatalln("failed to serve")
 	}
 }
 
-func configureLogger() []grpc.ServerOption {
-	err := logging.Init(logLevelString, os.Stdout, os.Stderr)
+func configureLogger(lvl string) []grpc.ServerOption {
+	err := logging.Init(lvl, os.Stdout, os.Stderr)
 	if err != nil {
 		logging.Err().WithError(err).Fatalln("failed logging initialization")
 	}
-	logging.Out().Printf("logging level: %s\n", logLevelString)
+	logging.Out().Printf("logging level: %s\n", lvl)
 
 	return []grpc.ServerOption{
 		grpc_middleware.WithStreamServerChain(
