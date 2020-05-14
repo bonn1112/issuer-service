@@ -35,3 +35,7 @@ func GetFiles(dir string) (files []File, err error) {
 	})
 	return
 }
+
+func TrimExt(filename string) string {
+	return filename[0 : len(filename)-len(filepath.Ext(filename))]
+}

@@ -1,23 +1,30 @@
 package certissuer
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
+	"time"
 
+	"github.com/lastrust/issuing-service/domain/cert"
 	"github.com/lastrust/issuing-service/domain/pdfconv"
 	"github.com/lastrust/issuing-service/utils/filesystem"
 	"github.com/lastrust/issuing-service/utils/path"
+	"github.com/lastrust/issuing-service/utils/str"
 )
 
 var ErrNoConfig = errors.New("configuration file is not exists")
+
+const ORIX_UUID = "eee2bdaa-6927-4162-aa62-285976286d2f"
 
 type (
 	// A CertIssuer for issuing the blockchain certificates
 	CertIssuer interface {
 		// IssueCertificate using the unsigned certificate with configuration file
 		// for issuing a blockchain certificate
-		IssueCertificate() error
+		IssueCertificate(context.Context) error
 	}
 
 	StorageAdapter interface {
@@ -31,38 +38,41 @@ type (
 )
 
 type certIssuer struct {
-	issuer         string
+	issuerId       string
 	processId      string
 	storageAdapter StorageAdapter
 	command        Command
 	pdfConverter   pdfconv.PdfConverter
+	certRepo       cert.Repository
 }
 
 // New a certIssuer constructor
 func New(
-	issuer, processId string,
+	issuerId, processId string,
 	storageAdapter StorageAdapter,
 	command Command,
 	pdfConverter pdfconv.PdfConverter,
+	certRepo cert.Repository,
 ) (CertIssuer, error) {
 	return &certIssuer{
-		issuer:         issuer,
+		issuerId:       issuerId,
 		processId:      processId,
 		storageAdapter: storageAdapter,
 		command:        command,
 		pdfConverter:   pdfConverter,
+		certRepo:       certRepo,
 	}, nil
 }
 
-func (i *certIssuer) IssueCertificate() error {
-	confPath := path.IssuerConfigPath(i.issuer, i.processId)
+func (i *certIssuer) IssueCertificate(ctx context.Context) error {
+	confPath := path.IssuerConfigPath(i.issuerId, i.processId)
 	defer os.Remove(confPath)
 
 	if !filesystem.FileExists(confPath) {
 		return ErrNoConfig
 	}
 
-	bcProcessDir := path.BlockcertsProcessDir(i.issuer, i.processId)
+	bcProcessDir := path.BlockcertsProcessDir(i.issuerId, i.processId)
 	if !filesystem.FileExists(bcProcessDir) {
 		_ = os.MkdirAll(bcProcessDir, 0755)
 	}
@@ -73,7 +83,7 @@ func (i *certIssuer) IssueCertificate() error {
 		return err
 	}
 
-	err = i.storeAllCerts(bcProcessDir)
+	err = i.storeAllCerts(ctx, bcProcessDir)
 	if err != nil {
 		return fmt.Errorf("failed certIssuer.storeAllCerts, %v", err)
 	}
@@ -81,35 +91,52 @@ func (i *certIssuer) IssueCertificate() error {
 	return nil
 }
 
-func (i *certIssuer) storeAllCerts(dir string) error {
+func (i *certIssuer) storeAllCerts(ctx context.Context, dir string) error {
 	files, err := filesystem.GetFiles(dir)
 	if err != nil {
 		return err
 	}
 
+	var certs []*cert.Cert
+	var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	var authorizeRequired bool
+	// TODO: specify the uuid, now it's hardcode :(
+	if i.issuerId == ORIX_UUID {
+		authorizeRequired = true
+	}
+
 	// TODO: rewrite to running as goroutine
 	for _, file := range files {
 		filenameWithoutExt := filesystem.FileNameWithoutExt(file.Info.Name())
-		if err := i.pdfConverter.HtmlToPdf(i.issuer, i.processId, filenameWithoutExt); err != nil {
+		if err := i.pdfConverter.HtmlToPdf(i.issuerId, i.processId, filenameWithoutExt); err != nil {
 			return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
 		}
 
-		pdfPath := path.PdfFilepath(i.issuer, filenameWithoutExt)
+		pdfPath := path.PdfFilepath(i.issuerId, filenameWithoutExt)
 		if !filesystem.FileExists(pdfPath) {
 			return fmt.Errorf("PDF file doesn't exist: %s", pdfPath)
 		}
 
-		err = i.storageAdapter.StorePdf(pdfPath, i.issuer, filenameWithoutExt)
+		err = i.storageAdapter.StorePdf(pdfPath, i.issuerId, filenameWithoutExt)
 		if err != nil {
 			return err
 		}
 		defer os.Remove(pdfPath)
 
-		err = i.storageAdapter.StoreCertificate(file.Path, i.issuer, file.Info.Name())
+		err = i.storageAdapter.StoreCertificate(file.Path, i.issuerId, file.Info.Name())
 		if err != nil {
 			return err
 		}
+
+		certs = append(certs, &cert.Cert{
+			Uuid:              filesystem.TrimExt(file.Info.Name()),
+			Password:          str.Random(seededRand, 16),
+			AuthorizeRequired: authorizeRequired,
+			IssuerId:          i.issuerId,
+			IssuingProcessId:  i.processId,
+		})
 	}
 
-	return nil
+	return i.certRepo.BulkCreate(ctx, certs)
 }

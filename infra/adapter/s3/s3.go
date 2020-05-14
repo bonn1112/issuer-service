@@ -34,13 +34,13 @@ func New(processEnv string) (*s3Adapter, error) {
 	return &s3Adapter{bucket}, nil
 }
 
-func (adapter *s3Adapter) StoreCertificate(filepath, issuer, filename string) error {
-	pathInS3 := fmt.Sprintf("%s/%s", issuer, filename)
+func (adapter *s3Adapter) StoreCertificate(filepath, issuerId, filename string) error {
+	pathInS3 := fmt.Sprintf("%s/%s", issuerId, filename)
 	return adapter.upload(filepath, pathInS3)
 }
 
-func (adapter *s3Adapter) StorePdf(filepath, issuer, filenameWithoutExt string) error {
-	pathInS3 := fmt.Sprintf("pdf/%s/%s.pdf", issuer, filenameWithoutExt)
+func (adapter *s3Adapter) StorePdf(filepath, issuerId, filenameWithoutExt string) error {
+	pathInS3 := fmt.Sprintf("pdf/%s/%s.pdf", issuerId, filenameWithoutExt)
 	return adapter.upload(filepath, pathInS3)
 }
 

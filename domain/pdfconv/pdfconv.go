@@ -30,11 +30,11 @@ func New(htmltopdf HtmlToPdf) PdfConverter {
 	return &pdfConverter{htmltopdf}
 }
 
-func (c *pdfConverter) HtmlToPdf(issuer, processId, filename string) (err error) {
+func (c *pdfConverter) HtmlToPdf(issuerId, processId, filename string) (err error) {
 	var (
-		certificatePath  = path.UnsignedCertificateFilepath(issuer, processId, filename)
-		tempHtmlFilepath = path.HtmlTempFilepath(issuer, filename)
-		pdfFilepath      = path.PdfFilepath(issuer, filename)
+		certificatePath  = path.UnsignedCertificateFilepath(issuerId, processId, filename)
+		tempHtmlFilepath = path.HtmlTempFilepath(issuerId, filename)
+		pdfFilepath      = path.PdfFilepath(issuerId, filename)
 	)
 	defer os.Remove(tempHtmlFilepath)
 

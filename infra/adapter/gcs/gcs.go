@@ -34,7 +34,7 @@ func New(processEnv string) (*gcsAdapter, error) {
 	return &gcsAdapter{bucket}, nil
 }
 
-func (s *gcsAdapter) StoreCertificate(filepath string, issuer string, filename string) (err error) {
+func (s *gcsAdapter) StoreCertificate(filepath, issuerId, filename string) (err error) {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
 	defer cancel()
@@ -44,7 +44,7 @@ func (s *gcsAdapter) StoreCertificate(filepath string, issuer string, filename s
 		return err
 	}
 
-	pathInGcs := path.CertsPathInGCS(issuer, filename)
+	pathInGcs := path.CertsPathInGCS(issuerId, filename)
 	w := client.Bucket(s.bucket).Object(pathInGcs).NewWriter(ctx)
 	f, err := os.Open(filepath)
 	if err != nil {
