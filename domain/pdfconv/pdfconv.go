@@ -26,6 +26,10 @@ type pdfConverter struct {
 	htmltopdf HtmlToPdf
 }
 
+func New(htmltopdf HtmlToPdf) PdfConverter {
+	return &pdfConverter{htmltopdf}
+}
+
 func (c *pdfConverter) HtmlToPdf(issuer, processId, filename string) (err error) {
 	var (
 		certificatePath  = path.UnsignedCertificateFilepath(issuer, processId, filename)
@@ -45,8 +49,4 @@ func (c *pdfConverter) HtmlToPdf(issuer, processId, filename string) (err error)
 	}
 
 	return c.htmltopdf.ExecPdfGenCommand(tempHtmlFilepath, pdfFilepath)
-}
-
-func New(htmltopdf HtmlToPdf) PdfConverter {
-	return &pdfConverter{htmltopdf}
 }

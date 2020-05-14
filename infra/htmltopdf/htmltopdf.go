@@ -15,7 +15,6 @@ import (
 var (
 	ErrDisplayHTMLNotFound = errors.New("displayHtml field not found")
 	ErrDisplayHTMLStruct   = errors.New("displayHtml field must be string")
-	ErrParseLayoutFile     = errors.New("failed parsing layout file")
 )
 
 type HtmlToPdf struct {
@@ -34,18 +33,18 @@ type layoutData struct {
 	Content template.HTML
 }
 
-func (htp *HtmlToPdf) ParseUnsignedCertificate(certPath string) (html interface{}, err error) {
+func (h2p *HtmlToPdf) ParseUnsignedCertificate(certPath string) (html interface{}, err error) {
 	certContent, err := ioutil.ReadFile(certPath)
 	if err != nil {
 		return
 	}
 
-	err = json.Unmarshal(certContent, &htp.Certificate)
+	err = json.Unmarshal(certContent, &h2p.Certificate)
 	if err != nil {
 		return
 	}
 
-	html, ok := htp.Certificate["displayHtml"]
+	html, ok := h2p.Certificate["displayHtml"]
 	if !ok {
 		return nil, ErrDisplayHTMLNotFound
 	}
@@ -53,16 +52,16 @@ func (htp *HtmlToPdf) ParseUnsignedCertificate(certPath string) (html interface{
 	return html, nil
 }
 
-func (htp *HtmlToPdf) CreateTempHtmlTemplate(html interface{}, htmlFilepath string) error {
+func (h2p *HtmlToPdf) CreateTempHtmlTemplate(html interface{}, htmlFilepath string) error {
 	htmlString, ok := html.(string)
 	if !ok {
 		return ErrDisplayHTMLStruct
 	}
 
 	// TODO: rewrite to reading this file at once
-	tpl, err := template.ParseFiles("static/layout.HtmlToPdf")
+	tpl, err := template.ParseFiles("static/layout.html")
 	if err != nil {
-		return ErrParseLayoutFile
+		return fmt.Errorf("failed parsing layout file, %v", err)
 	}
 
 	var buf bytes.Buffer
@@ -79,6 +78,6 @@ func (htp *HtmlToPdf) CreateTempHtmlTemplate(html interface{}, htmlFilepath stri
 	return nil
 }
 
-func (htp *HtmlToPdf) ExecPdfGenCommand(htmlFilepath, pdfFilepath string) error {
-	return htp.Command.HtmlToPdf(htmlFilepath, pdfFilepath)
+func (h2p *HtmlToPdf) ExecPdfGenCommand(htmlFilepath, pdfFilepath string) error {
+	return h2p.Command.HtmlToPdf(htmlFilepath, pdfFilepath)
 }

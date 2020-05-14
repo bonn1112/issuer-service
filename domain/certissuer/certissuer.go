@@ -61,11 +61,6 @@ func (i *certIssuer) IssueCertificate() error {
 		return ErrNoConfig
 	}
 
-	// FIXME: failed parsing layout file
-	// if err := i.pdfConverter.HtmlToPdf(i.issuer, i.filename); err != nil {
-	// 	return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
-	// }
-
 	bcProcessDir := path.BlockcertsProcessDir(i.issuer, i.processId)
 	if !filesystem.FileExists(bcProcessDir) {
 		_ = os.MkdirAll(bcProcessDir, 0755)
@@ -97,6 +92,12 @@ func (i *certIssuer) storeAllCerts(dir string) error {
 		if err != nil {
 			return err
 		}
+
+		filename := filesystem.FileNameWithoutExt(file.Info.Name())
+		if err := i.pdfConverter.HtmlToPdf(i.issuer, i.processId, filename); err != nil {
+			return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
+		}
+
 	}
 
 	return nil
