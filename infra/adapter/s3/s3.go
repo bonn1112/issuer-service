@@ -10,8 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-
-	"github.com/lastrust/issuing-service/utils/path"
 )
 
 var errInvalidProcessEnv = errors.New("Invalid PROCESS_ENV")
@@ -36,7 +34,17 @@ func New(processEnv string) (*s3Adapter, error) {
 	return &s3Adapter{bucket}, nil
 }
 
-func (s *s3Adapter) StoreCerts(filepath string, issuer string, filename string) error {
+func (adapter *s3Adapter) StoreCertificate(filepath, issuer, filename string) error {
+	pathInS3 := fmt.Sprintf("%s/%s", issuer, filename)
+	return adapter.upload(filepath, pathInS3)
+}
+
+func (adapter *s3Adapter) StorePdf(filepath, issuer, filenameWithoutExt string) error {
+	pathInS3 := fmt.Sprintf("pdf/%s/%s.pdf", issuer, filenameWithoutExt)
+	return adapter.upload(filepath, pathInS3)
+}
+
+func (adapter *s3Adapter) upload(filepath, key string) error {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
 	defer cancel()
@@ -53,11 +61,9 @@ func (s *s3Adapter) StoreCerts(filepath string, issuer string, filename string) 
 	}
 	defer file.Close()
 
-	pathInS3 := path.CertsPathInS3(issuer, filename)
-
 	_, err = uploader.UploadWithContext(ctx, &s3manager.UploadInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(pathInS3),
+		Bucket: aws.String(adapter.bucket),
+		Key:    aws.String(key),
 		Body:   file,
 		ACL:    aws.String("public-read"),
 	})

@@ -3,6 +3,7 @@ package gcs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -33,7 +34,7 @@ func New(processEnv string) (*gcsAdapter, error) {
 	return &gcsAdapter{bucket}, nil
 }
 
-func (s *gcsAdapter) StoreCerts(filepath string, issuer string, filename string) (err error) {
+func (s *gcsAdapter) StoreCertificate(filepath string, issuer string, filename string) (err error) {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
 	defer cancel()
@@ -55,4 +56,8 @@ func (s *gcsAdapter) StoreCerts(filepath string, issuer string, filename string)
 	}
 
 	return w.Close()
+}
+
+func (adapter *gcsAdapter) StorePdf(_, _, _ string) error {
+	return fmt.Errorf("gcsAdapter.SrorePdf is not implemented")
 }

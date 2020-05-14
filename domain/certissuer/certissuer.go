@@ -21,7 +21,8 @@ type (
 	}
 
 	StorageAdapter interface {
-		StoreCerts(string, string, string) error
+		StoreCertificate(string, string, string) error
+		StorePdf(string, string, string) error
 	}
 
 	Command interface {
@@ -86,18 +87,28 @@ func (i *certIssuer) storeAllCerts(dir string) error {
 		return err
 	}
 
+	// TODO: rewrite to running as goroutine
 	for _, file := range files {
-		// TODO: rewrite to running as goroutine
-		err = i.storageAdapter.StoreCerts(file.Path, i.issuer, file.Info.Name())
-		if err != nil {
-			return err
-		}
-
-		filename := filesystem.FileNameWithoutExt(file.Info.Name())
-		if err := i.pdfConverter.HtmlToPdf(i.issuer, i.processId, filename); err != nil {
+		filenameWithoutExt := filesystem.FileNameWithoutExt(file.Info.Name())
+		if err := i.pdfConverter.HtmlToPdf(i.issuer, i.processId, filenameWithoutExt); err != nil {
 			return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
 		}
 
+		pdfPath := path.PdfFilepath(i.issuer, filenameWithoutExt)
+		if !filesystem.FileExists(pdfPath) {
+			return fmt.Errorf("PDF file doesn't exist: %s", pdfPath)
+		}
+
+		err = i.storageAdapter.StorePdf(pdfPath, i.issuer, filenameWithoutExt)
+		if err != nil {
+			return err
+		}
+		defer os.Remove(pdfPath)
+
+		err = i.storageAdapter.StoreCertificate(file.Path, i.issuer, file.Info.Name())
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
