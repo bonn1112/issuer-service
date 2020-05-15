@@ -129,8 +129,14 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, dir string) error {
 			return err
 		}
 
+		filename := filesystem.TrimExt(file.Info.Name())
+
+		if err = i.pdfConverter.HtmlToPdf(i.issuerId, i.processId, filename); err != nil {
+			return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
+		}
+
 		certs = append(certs, &cert.Cert{
-			Uuid:              filesystem.TrimExt(file.Info.Name()),
+			Uuid:              filename,
 			Password:          str.Random(seededRand, 16),
 			AuthorizeRequired: authorizeRequired,
 			IssuerId:          i.issuerId,
