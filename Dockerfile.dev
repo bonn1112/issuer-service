@@ -66,6 +66,7 @@ RUN npm ci
 COPY ./storage /storage
 
 WORKDIR /go/src/github.com/lastrust/issuing-service
+COPY docker/fonts/* /usr/share/fonts/truetype/
+
 ENV GOFLAGS -mod=vendor
 CMD [ "air", "-d" ]
-
