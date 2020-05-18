@@ -1,8 +1,9 @@
-package infra
+package gcs
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -17,7 +18,7 @@ type gcsAdapter struct {
 	bucket string
 }
 
-func NewGcsAdapter(processEnv string) (*gcsAdapter, error) {
+func New(processEnv string) (*gcsAdapter, error) {
 	var bucket string
 	switch processEnv {
 	case "dev":
@@ -33,7 +34,7 @@ func NewGcsAdapter(processEnv string) (*gcsAdapter, error) {
 	return &gcsAdapter{bucket}, nil
 }
 
-func (s *gcsAdapter) StoreCerts(filepath string, issuerId string, filename string) (err error) {
+func (s *gcsAdapter) StoreCertificate(filepath, issuerId, filename string) (err error) {
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Second*50)
 	defer cancel()
@@ -55,4 +56,8 @@ func (s *gcsAdapter) StoreCerts(filepath string, issuerId string, filename strin
 	}
 
 	return w.Close()
+}
+
+func (adapter *gcsAdapter) StorePdf(_, _, _ string) error {
+	return fmt.Errorf("gcsAdapter.SrorePdf is not implemented")
 }

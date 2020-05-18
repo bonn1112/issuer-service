@@ -17,6 +17,8 @@ import (
 
 var ErrNoConfig = errors.New("configuration file is not exists")
 
+const orixUuid = "eee2bdaa-6927-4162-aa62-285976286d2f"
+
 type (
 	// A CertIssuer for issuing the blockchain certificates
 	CertIssuer interface {
@@ -26,7 +28,8 @@ type (
 	}
 
 	StorageAdapter interface {
-		StoreCerts(string, string, string) error
+		StoreCertificate(string, string, string) error
+		StorePdf(string, string, string) error
 	}
 
 	Command interface {
@@ -69,34 +72,24 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 		return ErrNoConfig
 	}
 
-	// FIXME: failed parsing layout file
-	// if err := i.pdfConverter.HtmlToPdf(i.issuer, i.filename); err != nil {
-	// 	return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
-	// }
+	bcProcessDir := path.BlockcertsProcessDir(i.issuerId, i.processId)
+	if !filesystem.FileExists(bcProcessDir) {
+		_ = os.MkdirAll(bcProcessDir, 0755)
+	}
+	defer os.RemoveAll(bcProcessDir)
 
 	err := i.command.IssueBlockchainCertificate(confPath)
 	if err != nil {
 		return err
 	}
 
-	bcCertsDir := path.BlockchainCertificatesDir(i.issuerId)
-	// FIXME: necessary create a separate blockchain certificate directory
-	// 	with process id not common
-	// 	because it's may duplicate a certificates if we running multiple requests
-	defer func() {
-		os.RemoveAll(bcCertsDir)
-		os.Mkdir(bcCertsDir, 0755)
-	}()
-
-	err = i.storeAllCerts(ctx, bcCertsDir)
+	err = i.storeAllCerts(ctx, bcProcessDir)
 	if err != nil {
 		return fmt.Errorf("failed certIssuer.storeAllCerts, %v", err)
 	}
 
 	return nil
 }
-
-const OrixUuid = "eee2bdaa-6927-4162-aa62-285976286d2f"
 
 func (i *certIssuer) storeAllCerts(ctx context.Context, dir string) error {
 	files, err := filesystem.GetFiles(dir)
@@ -109,13 +102,29 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, dir string) error {
 
 	var authorizeRequired bool
 	// TODO: specify the uuid, now it's hardcode :(
-	if i.issuerId == OrixUuid {
+	if i.issuerId == orixUuid {
 		authorizeRequired = true
 	}
 
+	// TODO: rewrite to running as goroutine
 	for _, file := range files {
-		// TODO: rewrite to running as goroutine
-		err = i.storageAdapter.StoreCerts(file.Path, i.issuerId, file.Info.Name())
+		filenameWithoutExt := filesystem.FileNameWithoutExt(file.Info.Name())
+		if err := i.pdfConverter.HtmlToPdf(i.issuerId, i.processId, filenameWithoutExt); err != nil {
+			return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
+		}
+
+		pdfPath := path.PdfFilepath(i.issuerId, filenameWithoutExt)
+		if !filesystem.FileExists(pdfPath) {
+			return fmt.Errorf("PDF file doesn't exist: %s", pdfPath)
+		}
+
+		err = i.storageAdapter.StorePdf(pdfPath, i.issuerId, filenameWithoutExt)
+		if err != nil {
+			return err
+		}
+		defer os.Remove(pdfPath)
+
+		err = i.storageAdapter.StoreCertificate(file.Path, i.issuerId, file.Info.Name())
 		if err != nil {
 			return err
 		}

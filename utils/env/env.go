@@ -9,7 +9,7 @@ type Config struct {
 
 type Service struct {
 	ProcessEnv   string `envconfig:"PROCESS_ENV" default:"dev"`
-	CloudService string `envconfig:"CLOUD_SERVICE" default:"gcp"`
+	CloudService string `envconfig:"CLOUD_SERVICE" default:"aws"`
 }
 
 type DB struct {

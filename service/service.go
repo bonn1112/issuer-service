@@ -43,7 +43,7 @@ func (s issuingService) IssueBlockchainCertificate(
 
 	_, err := s.issuerRepo.FirstByUuid(req.IssuerId)
 	if err != nil {
-		logging.Err().WithError(err).Errorf("error in db request firstByName in issuer repo with name %s", req.IssuerId)
+		logging.Err().WithError(err).Errorf("error in db request firstByUuid in issuer repo with name %s", req.IssuerId)
 		return nil, err
 	}
 
