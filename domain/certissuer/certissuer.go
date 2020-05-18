@@ -17,7 +17,7 @@ import (
 
 var ErrNoConfig = errors.New("configuration file is not exists")
 
-const ORIX_UUID = "eee2bdaa-6927-4162-aa62-285976286d2f"
+const orixUuid = "eee2bdaa-6927-4162-aa62-285976286d2f"
 
 type (
 	// A CertIssuer for issuing the blockchain certificates
@@ -102,7 +102,7 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, dir string) error {
 
 	var authorizeRequired bool
 	// TODO: specify the uuid, now it's hardcode :(
-	if i.issuerId == ORIX_UUID {
+	if i.issuerId == orixUuid {
 		authorizeRequired = true
 	}
 

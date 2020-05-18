@@ -21,14 +21,11 @@ type s3Adapter struct {
 func New(processEnv string) (*s3Adapter, error) {
 	var bucket string
 	switch processEnv {
-	case "dev":
-		bucket = "issued-cloudcerts-stg"
-	case "stg":
-		bucket = "issued-cloudcerts-stg"
 	case "prd":
 		bucket = "issued-cloudcerts-prd"
+	case "stg", "dev":
 	default:
-		return nil, errInvalidProcessEnv
+		bucket = "issued-cloudcerts-stg"
 	}
 
 	return &s3Adapter{bucket}, nil
