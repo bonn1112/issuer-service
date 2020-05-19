@@ -55,7 +55,6 @@ RUN sed -i -e 's/v3.11/edge/g' /etc/apk/repositories \
     chromium \
     && apk upgrade --no-cache --available
 ENV CHROME_BIN /usr/bin/chromium-browser
-RUN npm ci
 
 WORKDIR /app
 COPY ./Makefile .
