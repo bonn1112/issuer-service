@@ -3,18 +3,12 @@ package filesystem
 import (
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // FileExists check file path for existent
 func FileExists(fp string) bool {
 	_, err := os.Stat(fp)
 	return err == nil
-}
-
-func FileNameWithoutExt(filename string) string {
-	pos := strings.LastIndex(filename, ".")
-	return filename[:pos]
 }
 
 type File struct {
