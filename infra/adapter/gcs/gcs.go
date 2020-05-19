@@ -58,6 +58,10 @@ func (s *gcsAdapter) StoreCertificate(filepath, issuerId, filename string) (err 
 	return w.Close()
 }
 
-func (adapter *gcsAdapter) StorePdf(_, _, _ string) error {
+func (s *gcsAdapter) StorePdf(_, _, _ string) error {
 	return fmt.Errorf("gcsAdapter.SrorePdf is not implemented")
+}
+
+func (s *gcsAdapter) StorePasswordRecords(_, _ string, _ [][]string) error {
+	return fmt.Errorf("gcsAdapter.StorePasswordRecords is not implemented")
 }
