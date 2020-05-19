@@ -85,7 +85,17 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 		return err
 	}
 
-	err = i.storeAllCerts(ctx, bcProcessDir)
+	files, err := filesystem.GetFiles(bcProcessDir)
+	if err != nil {
+		return err
+	}
+
+	// TODO: specify the uuid, now it's hardcode :(
+	if i.issuerId == orixUuid {
+		err = i.storeAllCertsWithPasswords(ctx, files)
+	} else {
+		err = i.storeAllCerts(ctx, files)
+	}
 	if err != nil {
 		return fmt.Errorf("failed certIssuer.storeAllCerts, %v", err)
 	}
@@ -93,21 +103,12 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 	return nil
 }
 
-func (i *certIssuer) storeAllCerts(ctx context.Context, dir string) error {
-	files, err := filesystem.GetFiles(dir)
-	if err != nil {
-		return err
-	}
-
-	// TODO: specify the uuid, now it's hardcode :(
-	if i.issuerId == orixUuid {
-		return i.storeAllCertsWithPasswords(ctx, files)
-	}
-
+func (i *certIssuer) storeAllCerts(ctx context.Context, files []filesystem.File) error {
 	var certs []*cert.Cert
+
 	for _, file := range files {
 		filename := filesystem.TrimExt(file.Info.Name())
-		if err = i.storeCert(file, filename); err != nil {
+		if err := i.storeCert(file, filename); err != nil {
 			return err
 		}
 
