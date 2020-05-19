@@ -65,7 +65,7 @@ ENV CHROME_BIN /usr/bin/chromium-browser
 COPY ./storage /storage
 
 WORKDIR /go/src/github.com/lastrust/issuing-service
-COPY docker/fonts/* /usr/share/fonts/truetype/
+COPY static/fonts/* /usr/share/fonts/truetype/
 
 ENV GOFLAGS -mod=vendor
 CMD [ "air", "-d" ]
