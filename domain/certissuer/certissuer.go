@@ -108,17 +108,17 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, dir string) error {
 
 	// TODO: rewrite to running as goroutine
 	for _, file := range files {
-		filenameWithoutExt := filesystem.FileNameWithoutExt(file.Info.Name())
-		if err := i.pdfConverter.HtmlToPdf(i.issuerId, i.processId, filenameWithoutExt); err != nil {
+		filename := filesystem.TrimExt(file.Info.Name())
+		if err := i.pdfConverter.HtmlToPdf(i.issuerId, i.processId, filename); err != nil {
 			return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
 		}
 
-		pdfPath := path.PdfFilepath(i.issuerId, filenameWithoutExt)
+		pdfPath := path.PdfFilepath(i.issuerId, filename)
 		if !filesystem.FileExists(pdfPath) {
 			return fmt.Errorf("PDF file doesn't exist: %s", pdfPath)
 		}
 
-		err = i.storageAdapter.StorePdf(pdfPath, i.issuerId, filenameWithoutExt)
+		err = i.storageAdapter.StorePdf(pdfPath, i.issuerId, filename)
 		if err != nil {
 			return err
 		}
@@ -130,7 +130,7 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, dir string) error {
 		}
 
 		certs = append(certs, &cert.Cert{
-			Uuid:              filesystem.TrimExt(file.Info.Name()),
+			Uuid:              filename,
 			Password:          str.Random(seededRand, 16),
 			AuthorizeRequired: authorizeRequired,
 			IssuerId:          i.issuerId,

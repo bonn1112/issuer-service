@@ -61,11 +61,11 @@ RUN sed -i -e 's/v3.11/edge/g' /etc/apk/repositories \
     chromium \
     && apk upgrade --no-cache --available
 ENV CHROME_BIN /usr/bin/chromium-browser
-RUN npm ci
 
 COPY ./storage /storage
 
 WORKDIR /go/src/github.com/lastrust/issuing-service
+COPY static/fonts/* /usr/share/fonts/truetype/
+
 ENV GOFLAGS -mod=vendor
 CMD [ "air", "-d" ]
-
