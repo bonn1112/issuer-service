@@ -13,6 +13,7 @@ import (
 	"github.com/lastrust/issuing-service/utils/filesystem"
 	"github.com/lastrust/issuing-service/utils/path"
 	"github.com/lastrust/issuing-service/utils/str"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var ErrNoConfig = errors.New("configuration file is not exists")
@@ -30,6 +31,7 @@ type (
 	StorageAdapter interface {
 		StoreCertificate(string, string, string) error
 		StorePdf(string, string, string) error
+		StorePasswordRecords(issuerId, processId string, records [][]string) error
 	}
 
 	Command interface {
@@ -83,7 +85,17 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 		return err
 	}
 
-	err = i.storeAllCerts(ctx, bcProcessDir)
+	files, err := filesystem.GetFiles(bcProcessDir)
+	if err != nil {
+		return err
+	}
+
+	// TODO: specify the uuid, now it's hardcode :(
+	if i.issuerId == orixUuid {
+		err = i.storeAllCertsWithPasswords(ctx, files)
+	} else {
+		err = i.storeAllCerts(ctx, files)
+	}
 	if err != nil {
 		return fmt.Errorf("failed certIssuer.storeAllCerts, %v", err)
 	}
@@ -91,52 +103,83 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 	return nil
 }
 
-func (i *certIssuer) storeAllCerts(ctx context.Context, dir string) error {
-	files, err := filesystem.GetFiles(dir)
-	if err != nil {
-		return err
+func (i *certIssuer) storeAllCerts(ctx context.Context, files []filesystem.File) error {
+	var certs []*cert.Cert
+
+	for _, file := range files {
+		filename := filesystem.TrimExt(file.Info.Name())
+		if err := i.storeCert(file, filename); err != nil {
+			return err
+		}
+
+		certs = append(certs, &cert.Cert{
+			Uuid:             filename,
+			Password:         "",
+			IssuerId:         i.issuerId,
+			IssuingProcessId: i.processId,
+		})
 	}
 
+	return i.certRepo.BulkCreate(ctx, certs)
+}
+
+func (i *certIssuer) storeAllCertsWithPasswords(ctx context.Context, files []filesystem.File) (err error) {
 	var certs []*cert.Cert
 	var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	var authorizeRequired bool
-	// TODO: specify the uuid, now it's hardcode :(
-	if i.issuerId == orixUuid {
-		authorizeRequired = true
+	passwordRecords := [][]string{
+		{"cert_id", "raw_password"},
 	}
 
 	// TODO: rewrite to running as goroutine
 	for _, file := range files {
 		filename := filesystem.TrimExt(file.Info.Name())
-		if err := i.pdfConverter.HtmlToPdf(i.issuerId, i.processId, filename); err != nil {
-			return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
-		}
-
-		pdfPath := path.PdfFilepath(i.issuerId, filename)
-		if !filesystem.FileExists(pdfPath) {
-			return fmt.Errorf("PDF file doesn't exist: %s", pdfPath)
-		}
-
-		err = i.storageAdapter.StorePdf(pdfPath, i.issuerId, filename)
-		if err != nil {
+		if err = i.storeCert(file, filename); err != nil {
 			return err
 		}
-		defer os.Remove(pdfPath)
 
-		err = i.storageAdapter.StoreCertificate(file.Path, i.issuerId, file.Info.Name())
+		password := str.Random(seededRand, 16)
+
+		passwordRecords = append(passwordRecords, []string{
+			filename, password,
+		})
+
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 		if err != nil {
 			return err
 		}
 
 		certs = append(certs, &cert.Cert{
 			Uuid:              filename,
-			Password:          str.Random(seededRand, 16),
-			AuthorizeRequired: authorizeRequired,
+			Password:          string(hashedPassword),
+			AuthorizeRequired: true,
 			IssuerId:          i.issuerId,
 			IssuingProcessId:  i.processId,
 		})
 	}
 
+	if err = i.storageAdapter.StorePasswordRecords(i.issuerId, i.processId, passwordRecords); err != nil {
+		return err
+	}
+
 	return i.certRepo.BulkCreate(ctx, certs)
+}
+
+func (i *certIssuer) storeCert(file filesystem.File, filename string) (err error) {
+	if err = i.pdfConverter.HtmlToPdf(i.issuerId, i.processId, filename); err != nil {
+		return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
+	}
+
+	pdfPath := path.PdfFilepath(i.issuerId, filename)
+	if !filesystem.FileExists(pdfPath) {
+		return fmt.Errorf("PDF file doesn't exist: %s", pdfPath)
+	}
+
+	err = i.storageAdapter.StorePdf(pdfPath, i.issuerId, filename)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(pdfPath)
+
+	return i.storageAdapter.StoreCertificate(file.Path, i.issuerId, file.Info.Name())
 }
