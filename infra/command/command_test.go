@@ -21,7 +21,7 @@ func TestCommand_HtmlToPdf(t *testing.T) {
 	)
 
 	cmd := command.New()
-	_, err = cmd.HtmlToPdf(htmlFilepath, pdfFilepath)
+	err = cmd.HtmlToPdf(htmlFilepath, pdfFilepath)
 	assert.Nil(t, err)
 	assert.True(t, filesystem.FileExists(pdfFilepath))
 
