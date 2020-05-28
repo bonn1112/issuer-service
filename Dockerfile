@@ -43,6 +43,8 @@ RUN apk add --update \
 WORKDIR /cert-issuer-cli
 RUN python3 setup.py experimental --blockchain=ethereum
 
+COPY ./static/fonts/* /usr/share/fonts/truetype/
+
 # install htmltopdf cli
 WORKDIR /app/pkg/htmltopdf
 COPY ./pkg/htmltopdf /app/pkg/htmltopdf
@@ -60,5 +62,7 @@ RUN npm ci
 WORKDIR /app
 COPY ./Makefile .
 COPY --from=builder /main .
+RUN mkdir ./static
+COPY ./static/layout.html ./static
 
 CMD [ "./main" ]
