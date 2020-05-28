@@ -23,10 +23,12 @@ func New(processEnv string) (*s3Adapter, error) {
 	switch processEnv {
 	case "prd":
 		bucket = "issued-cloudcerts-prd"
-	case "stg", "dev":
+	case "stg":
+		bucket = "issued-cloudcerts-stg"
+	case "dev":
 		fallthrough
 	default:
-		bucket = "issued-cloudcerts-stg"
+		bucket = "issued-cloudcerts-sandbox"
 	}
 
 	return &s3Adapter{bucket}, nil
