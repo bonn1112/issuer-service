@@ -17,6 +17,8 @@ var (
 	ErrDisplayHTMLStruct   = errors.New("displayHtml field must be string")
 )
 
+var LayoutFilepath = "static/layout.html"
+
 type HtmlToPdf struct {
 	Command     pdfconv.Command
 	Certificate map[string]interface{}
@@ -59,7 +61,7 @@ func (h2p *HtmlToPdf) CreateTempHtmlTemplate(html interface{}, htmlFilepath stri
 	}
 
 	// TODO: rewrite to reading this file at once
-	tpl, err := template.ParseFiles("static/layout.html")
+	tpl, err := template.ParseFiles(LayoutFilepath)
 	if err != nil {
 		return fmt.Errorf("failed parsing layout file, %v", err)
 	}

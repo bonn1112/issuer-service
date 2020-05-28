@@ -1,9 +1,12 @@
 package htmltopdf_test
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/lastrust/issuing-service/infra/htmltopdf"
+	"github.com/lastrust/issuing-service/utils/filesystem"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -37,6 +40,26 @@ var _ = Describe("HtmlToPDF.ParseUnsignedCertificate", func() {
 			Expect(err).ToNot(BeNil())
 			Expect(err.Error()).To(Equal("open /undefined_directory/undefined_certificate.json: no such file or directory"))
 			Expect(data).To(BeNil())
+		})
+	})
+})
+
+var _ = Describe("HtmlToPDF.CreateTempHtmlTemplate", func() {
+	Context("when i give an html string as interface", func() {
+		const html = "<h1>Test HTML</h1>"
+		htmltopdf.LayoutFilepath = "../../static/layout.html"
+		htmlFilepath, _ := filepath.Abs("../../test/htmltopdf_CreateTempHtmlTemplate.html")
+		AfterEach(func() {
+			htmltopdf.LayoutFilepath = "static/layout.html"
+			os.Remove(htmlFilepath)
+		})
+
+		h2p := htmltopdf.New(nil)
+		err := h2p.CreateTempHtmlTemplate(interface{}(html), htmlFilepath)
+		fmt.Println(err)
+		It("error is nil and html template exists in filesystem storage", func() {
+			Expect(err).To(BeNil())
+			Expect(filesystem.FileExists(htmlFilepath)).To(Equal(true))
 		})
 	})
 })
