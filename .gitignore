@@ -4,3 +4,6 @@
 vendor
 
 tmp
+
+# generated mocks
+mocks/

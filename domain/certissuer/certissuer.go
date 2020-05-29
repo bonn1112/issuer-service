@@ -16,6 +16,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+//go:generate mockgen -destination=../../mocks/certissuer_Command.go -package=mocks github.com/lastrust/issuing-service/domain/certissuer Command
+
 var ErrNoConfig = errors.New("configuration file is not exists")
 
 const orixUuid = "eee2bdaa-6927-4162-aa62-285976286d2f"
@@ -55,7 +57,7 @@ func New(
 	command Command,
 	pdfConverter pdfconv.PdfConverter,
 	certRepo cert.Repository,
-) (CertIssuer, error) {
+) CertIssuer {
 	return &certIssuer{
 		issuerId:       issuerId,
 		processId:      processId,
@@ -63,16 +65,15 @@ func New(
 		command:        command,
 		pdfConverter:   pdfConverter,
 		certRepo:       certRepo,
-	}, nil
+	}
 }
 
 func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 	confPath := path.IssuerConfigPath(i.issuerId, i.processId)
-	defer os.Remove(confPath)
-
 	if !filesystem.FileExists(confPath) {
 		return ErrNoConfig
 	}
+	defer os.Remove(confPath)
 
 	bcProcessDir := path.BlockcertsProcessDir(i.issuerId, i.processId)
 	if !filesystem.FileExists(bcProcessDir) {
@@ -104,7 +105,7 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 }
 
 func (i *certIssuer) storeAllCerts(ctx context.Context, files []filesystem.File) error {
-	var certs []*cert.Cert
+	certs := make([]*cert.Cert, 0)
 
 	for _, file := range files {
 		filename := filesystem.TrimExt(file.Info.Name())

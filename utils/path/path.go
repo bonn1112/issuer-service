@@ -4,6 +4,10 @@ import "fmt"
 
 var dataDir = "/storage/data/"
 
+func SetDataDir(gotDataDir string) {
+	dataDir = gotDataDir
+}
+
 func IssuerConfigPath(issuerId, processId string) string {
 	return fmt.Sprintf("%s%s/issuer-configs/%s.ini", dataDir, issuerId, processId)
 }

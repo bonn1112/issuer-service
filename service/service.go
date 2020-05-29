@@ -56,17 +56,13 @@ func (s issuingService) IssueBlockchainCertificate(
 	cmd := command.New()
 	pdfConverter := pdfconv.New(htmltopdf.New(cmd))
 
-	ci, err := certissuer.New(
+	ci := certissuer.New(
 		req.IssuerId, req.ProcessId,
 		storageAdapter,
 		cmd,
 		pdfConverter,
 		s.certRepo,
 	)
-	if err != nil {
-		logging.Err().WithError(err).Error("failed to build CertIssuer")
-		return nil, err
-	}
 
 	logging.Out().Infof("Start issuing process: %s %s", req.IssuerId, req.ProcessId)
 	if err = ci.IssueCertificate(ctx); err != nil {

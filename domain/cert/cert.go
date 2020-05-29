@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+//go:generate mockgen -destination=../../mocks/cert_Repository.go -package=mocks github.com/lastrust/issuing-service/domain/cert Repository
+
 type Cert struct {
 	Uuid              string
 	Password          string
