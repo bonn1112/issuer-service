@@ -12,10 +12,10 @@ WORKDIR /go/src/github.com/cosmtrek/air
 RUN git clone https://github.com/cosmtrek/air.git .
 RUN make ci && make install
 
-COPY ./issuing-service /go/src/github.com/lastrust/issuing-service
+COPY . /go/src/github.com/lastrust/issuing-service
 
-COPY ./issuing-service/pkg/cert-issuer /cert-issuer-cli
-COPY ./issuing-service/pkg/cert-issuer/conf_regtest.ini /etc/cert-issuer/conf.ini
+COPY ./pkg/cert-issuer /cert-issuer-cli
+COPY ./pkg/cert-issuer/conf_regtest.ini /etc/cert-issuer/conf.ini
 
 RUN apk add --update \
         bash \
@@ -62,10 +62,8 @@ RUN sed -i -e 's/v3.11/edge/g' /etc/apk/repositories \
     && apk upgrade --no-cache --available
 ENV CHROME_BIN /usr/bin/chromium-browser
 
-COPY ./storage /storage
-
 WORKDIR /go/src/github.com/lastrust/issuing-service
-COPY ./issuing-service/static/fonts/* /usr/share/fonts/truetype/
+COPY ./static/fonts/* /usr/share/fonts/truetype/
 
 ENV GOFLAGS -mod=vendor
 CMD [ "air", "-d" ]

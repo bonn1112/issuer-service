@@ -15,9 +15,9 @@ type Service struct {
 type DB struct {
 	Host     string `envconfig:"DB_HOST" default:"db"`
 	Port     int    `envconfig:"DB_PORT" default:"5432"`
-	User     string `envconfig:"DB_USER" default:"postgres"`
+	User     string `envconfig:"DB_USER" default:"lastrust"`
 	Password string `envconfig:"DB_PASSWORD" default:"postgres"`
-	Database string `envconfig:"DB_NAME" default:"lst_dev"`
+	Database string `envconfig:"DB_NAME" default:"postgres"`
 
 	MaxOpenConns int `envconfig:"DB_MAXOPENCONNS" default:"10"`
 	MaxIdleConns int `envconfig:"DB_MAXIDLECONNS" default:"10"`
