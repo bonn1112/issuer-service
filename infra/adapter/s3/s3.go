@@ -25,6 +25,8 @@ func New(processEnv string) (*s3Adapter, error) {
 		bucket = "issued-cloudcerts-prd"
 	case "stg":
 		bucket = "issued-cloudcerts-stg"
+	case "orix":
+		bucket = "issued-cloudcerts-orix"
 	case "dev":
 		fallthrough
 	default:
@@ -81,7 +83,7 @@ func (adapter *s3Adapter) upload(filepath, key string) error {
 		ACL:    aws.String("public-read"),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to upload file, %v", err)
+		return fmt.Errorf("failed to upload file, %s %s %v", adapter.bucket, key, err)
 	}
 
 	return nil
@@ -105,7 +107,7 @@ func (adapter *s3Adapter) uploadFromReader(reader io.Reader, key string) error {
 		ACL:    aws.String("public-read"),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to upload file, %v", err)
+		return fmt.Errorf("failed to upload file, %s %s %v", adapter.bucket, key, err)
 	}
 
 	return nil
