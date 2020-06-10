@@ -17,8 +17,9 @@ type File struct {
 }
 
 // GetFiles returns a files by directory path
-func GetFiles(dir string) (files []File, err error) {
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+func GetFiles(dir string) ([]File, error) {
+	files := make([]File, 0)
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -27,7 +28,7 @@ func GetFiles(dir string) (files []File, err error) {
 		}
 		return nil
 	})
-	return
+	return files, err
 }
 
 func TrimExt(filename string) string {
