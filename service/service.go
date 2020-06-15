@@ -55,7 +55,7 @@ func (s issuingService) IssueBlockchainCertificate(
 	}
 
 	cmd := command.New()
-	pdfConverter := pdfconv.New(htmltopdf.New(cmd), s.semaphore)
+	pdfConverter := pdfconv.New(htmltopdf.New(cmd))
 
 	ci := certissuer.New(
 		req.IssuerId, req.ProcessId,
@@ -63,6 +63,7 @@ func (s issuingService) IssueBlockchainCertificate(
 		cmd,
 		pdfConverter,
 		s.certRepo,
+		s.semaphore,
 	)
 
 	logging.Out().Infof("Start issuing process: %s %s", req.IssuerId, req.ProcessId)
