@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/lastrust/issuing-service/domain/cert"
@@ -14,6 +15,7 @@ import (
 	"github.com/lastrust/issuing-service/utils/path"
 	"github.com/lastrust/issuing-service/utils/str"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/sync/semaphore"
 )
 
 //go:generate mockgen -destination=../../mocks/certissuer_Command.go -package=mocks github.com/lastrust/issuing-service/domain/certissuer Command
@@ -48,6 +50,8 @@ type certIssuer struct {
 	command        Command
 	pdfConverter   pdfconv.PdfConverter
 	certRepo       cert.Repository
+	semaphore      *semaphore.Weighted
+	wg             sync.WaitGroup
 }
 
 // New a certIssuer constructor
@@ -57,6 +61,7 @@ func New(
 	command Command,
 	pdfConverter pdfconv.PdfConverter,
 	certRepo cert.Repository,
+	semaphore *semaphore.Weighted,
 ) CertIssuer {
 	return &certIssuer{
 		issuerId:       issuerId,
@@ -65,6 +70,8 @@ func New(
 		command:        command,
 		pdfConverter:   pdfConverter,
 		certRepo:       certRepo,
+		semaphore:      semaphore,
+		wg:             sync.WaitGroup{},
 	}
 }
 
@@ -105,65 +112,131 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 }
 
 func (i *certIssuer) storeAllCerts(ctx context.Context, files []filesystem.File) error {
-	certs := make([]*cert.Cert, 0)
+	var (
+		doneCh = make(chan bool)
+		errCh  = make(chan error)
+	)
 
-	for _, file := range files {
-		filename := filesystem.TrimExt(file.Info.Name())
-		if err := i.storeCert(file, filename); err != nil {
-			return err
-		}
-
-		certs = append(certs, &cert.Cert{
-			Uuid:             filename,
-			Password:         "",
-			IssuerId:         i.issuerId,
-			IssuingProcessId: i.processId,
-		})
-	}
-
-	return i.certRepo.BulkCreate(ctx, certs)
-}
-
-func (i *certIssuer) storeAllCertsWithPasswords(ctx context.Context, files []filesystem.File) (err error) {
-	var certs []*cert.Cert
-	var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	passwordRecords := [][]string{
-		{"cert_id", "raw_password"},
-	}
-
-	// TODO: rewrite to running as goroutine
-	for _, file := range files {
-		filename := filesystem.TrimExt(file.Info.Name())
-		if err = i.storeCert(file, filename); err != nil {
-			return err
-		}
-
-		password := str.Random(seededRand, 16)
-
-		passwordRecords = append(passwordRecords, []string{
-			filename, password,
-		})
-
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
-		if err != nil {
-			return err
-		}
-
-		certs = append(certs, &cert.Cert{
-			Uuid:              filename,
-			Password:          string(hashedPassword),
-			AuthorizeRequired: true,
-			IssuerId:          i.issuerId,
-			IssuingProcessId:  i.processId,
-		})
-	}
-
-	if err = i.storageAdapter.StorePasswordRecords(i.issuerId, i.processId, passwordRecords); err != nil {
+	tx, err := i.certRepo.StartBulkCreation(ctx)
+	if err != nil {
 		return err
 	}
 
-	return i.certRepo.BulkCreate(ctx, certs)
+	i.wg.Add(len(files))
+	go func() {
+		for _, file := range files {
+			i.semaphore.Acquire(ctx, 1)
+			go func(file filesystem.File) {
+				defer func() {
+					i.wg.Done()
+					i.semaphore.Release(1)
+				}()
+
+				filename := filesystem.TrimExt(file.Info.Name())
+				if err = i.storeCert(file, filename); err != nil {
+					errCh <- err
+					return
+				}
+
+				c := &cert.Cert{
+					Uuid:             filename,
+					Password:         "",
+					IssuerId:         i.issuerId,
+					IssuingProcessId: i.processId,
+				}
+				if err = i.certRepo.AppendToBulkCreation(tx, c); err != nil {
+					errCh <- err
+					return
+				}
+			}(file)
+		}
+		i.wg.Wait()
+		close(doneCh)
+	}()
+
+	for {
+		select {
+		case err = <-errCh:
+			_ = tx.Rollback()
+			return err
+
+		case <-doneCh:
+			return tx.Commit()
+		}
+	}
+}
+
+func (i *certIssuer) storeAllCertsWithPasswords(ctx context.Context, files []filesystem.File) error {
+	var (
+		doneCh          = make(chan bool)
+		errCh           = make(chan error)
+		seededRand      = rand.New(rand.NewSource(time.Now().UnixNano()))
+		passwordRecords = [][]string{
+			{"cert_id", "raw_password"},
+		}
+	)
+
+	tx, err := i.certRepo.StartBulkCreation(ctx)
+	if err != nil {
+		return err
+	}
+
+	i.wg.Add(len(files))
+	go func() {
+		i.semaphore.Acquire(ctx, 1)
+		for _, file := range files {
+			go func(file filesystem.File) {
+				defer func() {
+					i.wg.Done()
+					i.semaphore.Release(1)
+				}()
+
+				filename := filesystem.TrimExt(file.Info.Name())
+				if err = i.storeCert(file, filename); err != nil {
+					errCh <- err
+					return
+				}
+
+				password := str.Random(seededRand, 16)
+				passwordRecords = append(passwordRecords, []string{
+					filename, password,
+				})
+
+				hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+				if err != nil {
+					errCh <- err
+					return
+				}
+
+				c := &cert.Cert{
+					Uuid:              filename,
+					Password:          string(hashedPassword),
+					AuthorizeRequired: true,
+					IssuerId:          i.issuerId,
+					IssuingProcessId:  i.processId,
+				}
+				if err = i.certRepo.AppendToBulkCreation(tx, c); err != nil {
+					errCh <- err
+				}
+			}(file)
+		}
+		i.wg.Wait()
+		close(doneCh)
+	}()
+
+	for {
+		select {
+		case err = <-errCh:
+			tx.Rollback()
+			return err
+
+		case <-doneCh:
+			if err = tx.Commit(); err != nil {
+				return err
+			}
+			return i.storageAdapter.StorePasswordRecords(i.issuerId, i.processId, passwordRecords)
+		}
+	}
 }
 
 func (i *certIssuer) storeCert(file filesystem.File, filename string) (err error) {
