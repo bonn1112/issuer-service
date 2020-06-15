@@ -8,8 +8,9 @@ type Config struct {
 }
 
 type Service struct {
-	ProcessEnv   string `envconfig:"PROCESS_ENV" default:"dev"`
-	CloudService string `envconfig:"CLOUD_SERVICE" default:"aws"`
+	ProcessEnv    string `envconfig:"PROCESS_ENV" default:"dev"`
+	CloudService  string `envconfig:"CLOUD_SERVICE" default:"aws"`
+	ParallelLimit int64  `envconfig:"PARALLEL_LIMIT" default:"50"`
 }
 
 type DB struct {
