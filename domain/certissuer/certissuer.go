@@ -167,9 +167,7 @@ func (i *certIssuer) storeAllCertsWithPasswords(ctx context.Context, files []fil
 }
 
 func (i *certIssuer) storeCert(file filesystem.File, filename string) (err error) {
-	if err = i.pdfConverter.HtmlToPdf(i.issuerId, i.processId, filename); err != nil {
-		return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
-	}
+	i.pdfConverter.HtmlToPdf(i.issuerId, i.processId, filename)
 
 	pdfPath := path.PdfFilepath(i.issuerId, filename)
 	if !filesystem.FileExists(pdfPath) {
