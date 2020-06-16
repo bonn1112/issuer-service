@@ -2,6 +2,7 @@ package cert
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -18,5 +19,6 @@ type Cert struct {
 }
 
 type Repository interface {
-	BulkCreate(context.Context, []*Cert) error
+	StartBulkCreation(ctx context.Context) (*sql.Tx, error)
+	AppendToBulkCreation(tx *sql.Tx, c *Cert) error
 }

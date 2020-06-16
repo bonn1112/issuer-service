@@ -15,22 +15,23 @@ import (
 	"github.com/lastrust/issuing-service/utils/env"
 	"github.com/lastrust/issuing-service/utils/path"
 	"github.com/lastrust/utils-go/logging"
+	"golang.org/x/sync/semaphore"
 )
 
 type issuingService struct {
-	cloudService string
-	processEnv   string
+	env       env.Service
+	semaphore *semaphore.Weighted
 
 	issuerRepo issuer.Repository
 	certRepo   cert.Repository
 }
 
-func New(conf env.Service, issuerRepo issuer.Repository, certRepo cert.Repository) protocol.IssuingServiceServer {
+func New(env env.Service, issuerRepo issuer.Repository, certRepo cert.Repository) protocol.IssuingServiceServer {
 	return &issuingService{
-		cloudService: conf.CloudService,
-		processEnv:   conf.ProcessEnv,
-		issuerRepo:   issuerRepo,
-		certRepo:     certRepo,
+		env:        env,
+		semaphore:  semaphore.NewWeighted(env.ParallelLimit),
+		issuerRepo: issuerRepo,
+		certRepo:   certRepo,
 	}
 }
 
@@ -47,7 +48,7 @@ func (s issuingService) IssueBlockchainCertificate(
 		return nil, err
 	}
 
-	storageAdapter, err := dicontainer.GetStorageAdapter(s.cloudService, s.processEnv)
+	storageAdapter, err := dicontainer.GetStorageAdapter(s.env.CloudService, s.env.ProcessEnv)
 	if err != nil {
 		logging.Err().WithError(err).Error("failed to build StorageAdapter")
 		return nil, err
@@ -62,6 +63,8 @@ func (s issuingService) IssueBlockchainCertificate(
 		cmd,
 		pdfConverter,
 		s.certRepo,
+		s.semaphore,
+		s.env.TransactionLimit,
 	)
 
 	logging.Out().Infof("Start issuing process: %s %s", req.IssuerId, req.ProcessId)

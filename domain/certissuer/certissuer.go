@@ -2,10 +2,13 @@ package certissuer
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/lastrust/issuing-service/domain/cert"
@@ -14,6 +17,7 @@ import (
 	"github.com/lastrust/issuing-service/utils/path"
 	"github.com/lastrust/issuing-service/utils/str"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/sync/semaphore"
 )
 
 //go:generate mockgen -destination=../../mocks/certissuer_Command.go -package=mocks github.com/lastrust/issuing-service/domain/certissuer Command
@@ -48,6 +52,9 @@ type certIssuer struct {
 	command        Command
 	pdfConverter   pdfconv.PdfConverter
 	certRepo       cert.Repository
+	semaphore      *semaphore.Weighted
+	wg             sync.WaitGroup
+	txLimit        int
 }
 
 // New a certIssuer constructor
@@ -57,6 +64,8 @@ func New(
 	command Command,
 	pdfConverter pdfconv.PdfConverter,
 	certRepo cert.Repository,
+	semaphore *semaphore.Weighted,
+	txLimit int,
 ) CertIssuer {
 	return &certIssuer{
 		issuerId:       issuerId,
@@ -65,6 +74,9 @@ func New(
 		command:        command,
 		pdfConverter:   pdfConverter,
 		certRepo:       certRepo,
+		semaphore:      semaphore,
+		wg:             sync.WaitGroup{},
+		txLimit:        txLimit,
 	}
 }
 
@@ -86,89 +98,131 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 		return err
 	}
 
-	files, err := filesystem.GetFiles(bcProcessDir)
-	if err != nil {
-		return err
-	}
-
 	// TODO: specify the uuid, now it's hardcode :(
-	if i.issuerId == orixUuid {
-		err = i.storeAllCertsWithPasswords(ctx, files)
-	} else {
-		err = i.storeAllCerts(ctx, files)
-	}
-	if err != nil {
+	if err = i.storeAllCerts(ctx, bcProcessDir, i.issuerId == orixUuid); err != nil {
 		return fmt.Errorf("failed certIssuer.storeAllCerts, %v", err)
 	}
-
 	return nil
 }
 
-func (i *certIssuer) storeAllCerts(ctx context.Context, files []filesystem.File) error {
-	certs := make([]*cert.Cert, 0)
+func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, withAuth bool) error {
+	var (
+		doneCh = make(chan bool)
+		errCh  = make(chan error)
+	)
 
-	for _, file := range files {
-		filename := filesystem.TrimExt(file.Info.Name())
-		if err := i.storeCert(file, filename); err != nil {
-			return err
+	var (
+		seededRand      *rand.Rand
+		passwordRecords = [][]string{
+			{"cert_id", "raw_password"},
 		}
+	)
+	if withAuth {
+		seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+	}
 
-		certs = append(certs, &cert.Cert{
-			Uuid:             filename,
-			Password:         "",
-			IssuerId:         i.issuerId,
-			IssuingProcessId: i.processId,
+	var (
+		tx  *sql.Tx
+		iTx int
+		err error
+	)
+
+	go func() {
+		filepath.Walk(bcProcessDir, func(path string, info os.FileInfo, _ error) (err error) {
+			if info.IsDir() {
+				return nil
+			}
+
+			if iTx == 0 {
+				tx, err = i.certRepo.StartBulkCreation(ctx)
+				if err != nil {
+					errCh <- err
+					return
+				}
+			}
+			iTx++
+
+			i.wg.Add(1)
+			i.semaphore.Acquire(ctx, 1)
+			go func(file filesystem.File, tx *sql.Tx, iTx int) {
+				defer func() {
+					i.wg.Done()
+					i.semaphore.Release(1)
+				}()
+
+				var (
+					hashedPassword []byte
+					err            error
+				)
+
+				filename := filesystem.TrimExt(file.Info.Name())
+				if err = i.storeCert(file, filename); err != nil {
+					tx.Rollback()
+					errCh <- err
+					return
+				}
+
+				if withAuth {
+					password := str.Random(seededRand, 16)
+					passwordRecords = append(passwordRecords, []string{
+						filename, password,
+					})
+
+					hashedPassword, err = bcrypt.GenerateFromPassword([]byte(password), 10)
+					if err != nil {
+						tx.Rollback()
+						errCh <- err
+						return
+					}
+				}
+
+				c := &cert.Cert{
+					Uuid:              filename,
+					Password:          string(hashedPassword),
+					AuthorizeRequired: true,
+					IssuerId:          i.issuerId,
+					IssuingProcessId:  i.processId,
+				}
+				if err = i.certRepo.AppendToBulkCreation(tx, c); err != nil {
+					tx.Rollback()
+					errCh <- err
+					return
+				}
+
+				if iTx == i.txLimit {
+					if err = tx.Commit(); err != nil {
+						errCh <- err
+						return
+					}
+				}
+			}(filesystem.File{Path: path, Info: info}, tx, iTx)
+
+			if iTx == i.txLimit {
+				iTx = 0
+			}
+			return
 		})
-	}
+		i.wg.Wait()
+		close(doneCh)
+	}()
 
-	return i.certRepo.BulkCreate(ctx, certs)
-}
-
-func (i *certIssuer) storeAllCertsWithPasswords(ctx context.Context, files []filesystem.File) (err error) {
-	var certs []*cert.Cert
-	var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	passwordRecords := [][]string{
-		{"cert_id", "raw_password"},
-	}
-
-	// TODO: rewrite to running as goroutine
-	for _, file := range files {
-		filename := filesystem.TrimExt(file.Info.Name())
-		if err = i.storeCert(file, filename); err != nil {
+	for {
+		select {
+		case err = <-errCh:
 			return err
+
+		case <-doneCh:
+			if withAuth {
+				return i.storageAdapter.StorePasswordRecords(i.issuerId, i.processId, passwordRecords)
+			}
+			return nil
 		}
-
-		password := str.Random(seededRand, 16)
-
-		passwordRecords = append(passwordRecords, []string{
-			filename, password,
-		})
-
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
-		if err != nil {
-			return err
-		}
-
-		certs = append(certs, &cert.Cert{
-			Uuid:              filename,
-			Password:          string(hashedPassword),
-			AuthorizeRequired: true,
-			IssuerId:          i.issuerId,
-			IssuingProcessId:  i.processId,
-		})
 	}
-
-	if err = i.storageAdapter.StorePasswordRecords(i.issuerId, i.processId, passwordRecords); err != nil {
-		return err
-	}
-
-	return i.certRepo.BulkCreate(ctx, certs)
 }
 
 func (i *certIssuer) storeCert(file filesystem.File, filename string) (err error) {
 	if err = i.pdfConverter.HtmlToPdf(i.issuerId, i.processId, filename); err != nil {
-		return fmt.Errorf("failed pdfconv.PdfConverter.HtmlToPdf, %v", err)
+		return
 	}
 
 	pdfPath := path.PdfFilepath(i.issuerId, filename)
@@ -178,7 +232,7 @@ func (i *certIssuer) storeCert(file filesystem.File, filename string) (err error
 
 	err = i.storageAdapter.StorePdf(pdfPath, i.issuerId, filename)
 	if err != nil {
-		return err
+		return
 	}
 	defer os.Remove(pdfPath)
 
