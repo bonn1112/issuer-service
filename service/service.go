@@ -64,6 +64,7 @@ func (s issuingService) IssueBlockchainCertificate(
 		pdfConverter,
 		s.certRepo,
 		s.semaphore,
+		s.env.TransactionLimit,
 	)
 
 	logging.Out().Infof("Start issuing process: %s %s", req.IssuerId, req.ProcessId)
