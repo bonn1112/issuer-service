@@ -27,4 +27,18 @@ type Repository interface {
 type Tx struct {
 	SqlTx *sql.Tx
 	Mu    sync.Mutex
+	Err   error
+}
+
+func (tx *Tx) Commit() error {
+	tx.Mu.Lock()
+	defer tx.Mu.Unlock()
+	return tx.SqlTx.Commit()
+}
+
+func (tx *Tx) Rollback(err error) {
+	tx.Mu.Lock()
+	tx.SqlTx.Rollback()
+	tx.Err = err
+	tx.Mu.Unlock()
 }
