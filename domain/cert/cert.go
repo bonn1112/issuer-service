@@ -3,6 +3,7 @@ package cert
 import (
 	"context"
 	"database/sql"
+	"sync"
 	"time"
 )
 
@@ -19,6 +20,11 @@ type Cert struct {
 }
 
 type Repository interface {
-	StartBulkCreation(ctx context.Context) (*sql.Tx, error)
-	AppendToBulkCreation(tx *sql.Tx, c *Cert) error
+	StartBulkCreation(ctx context.Context) (*Tx, error)
+	AppendToBulkCreation(tx *Tx, c *Cert) error
+}
+
+type Tx struct {
+	SqlTx *sql.Tx
+	Mu    sync.Mutex
 }

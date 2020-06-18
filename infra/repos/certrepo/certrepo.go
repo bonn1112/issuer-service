@@ -3,6 +3,7 @@ package certrepo
 import (
 	"context"
 	"database/sql"
+	"sync"
 
 	"github.com/lastrust/issuing-service/domain/cert"
 )
@@ -21,16 +22,18 @@ func New(db *sql.DB) cert.Repository {
 	return &repo{db}
 }
 
-func (r *repo) StartBulkCreation(ctx context.Context) (*sql.Tx, error) {
+func (r *repo) StartBulkCreation(ctx context.Context) (*cert.Tx, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	return tx, nil
+	return &cert.Tx{SqlTx: tx, Mu: sync.Mutex{}}, nil
 }
 
-func (r *repo) AppendToBulkCreation(tx *sql.Tx, c *cert.Cert) error {
-	_, err := tx.Exec(queryCreate,
+func (r *repo) AppendToBulkCreation(tx *cert.Tx, c *cert.Cert) error {
+	tx.Mu.Lock()
+	_, err := tx.SqlTx.Exec(queryCreate,
 		c.Uuid, c.Password, c.AuthorizeRequired, c.IssuerId, c.IssuingProcessId)
+	tx.Mu.Unlock()
 	return err
 }

@@ -2,7 +2,6 @@ package certissuer
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"math/rand"
@@ -122,7 +121,7 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 	}
 
 	var (
-		tx  *sql.Tx
+		tx  *cert.Tx
 		iTx int
 		err error
 	)
@@ -144,7 +143,7 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 
 			i.wg.Add(1)
 			i.semaphore.Acquire(ctx, 1)
-			go func(file filesystem.File, tx *sql.Tx, iTx int) {
+			go func(file filesystem.File, tx *cert.Tx, iTx int) {
 				defer func() {
 					i.wg.Done()
 					i.semaphore.Release(1)
@@ -157,7 +156,7 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 
 				filename := filesystem.TrimExt(file.Info.Name())
 				if err = i.storeCert(file, filename); err != nil {
-					tx.Rollback()
+					tx.SqlTx.Rollback()
 					errCh <- err
 					return
 				}
@@ -170,7 +169,7 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 
 					hashedPassword, err = bcrypt.GenerateFromPassword([]byte(password), 10)
 					if err != nil {
-						tx.Rollback()
+						tx.SqlTx.Rollback()
 						errCh <- err
 						return
 					}
@@ -184,13 +183,13 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 					IssuingProcessId:  i.processId,
 				}
 				if err = i.certRepo.AppendToBulkCreation(tx, c); err != nil {
-					tx.Rollback()
+					tx.SqlTx.Rollback()
 					errCh <- err
 					return
 				}
 
 				if iTx == i.txLimit {
-					if err = tx.Commit(); err != nil {
+					if err = tx.SqlTx.Commit(); err != nil {
 						errCh <- err
 						return
 					}
