@@ -156,7 +156,7 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 
 				filename := filesystem.TrimExt(file.Info.Name())
 				if err = i.storeCert(file, filename); err != nil {
-					tx.SqlTx.Rollback()
+					tx.Rollback(err)
 					errCh <- err
 					return
 				}
@@ -169,7 +169,7 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 
 					hashedPassword, err = bcrypt.GenerateFromPassword([]byte(password), 10)
 					if err != nil {
-						tx.SqlTx.Rollback()
+						tx.Rollback(err)
 						errCh <- err
 						return
 					}
@@ -183,19 +183,23 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 					IssuingProcessId:  i.processId,
 				}
 				if err = i.certRepo.AppendToBulkCreation(tx, c); err != nil {
-					tx.SqlTx.Rollback()
+					tx.Rollback(err)
 					errCh <- err
 					return
 				}
 
 				if iTx == i.txLimit {
-					if err = tx.SqlTx.Commit(); err != nil {
+					if err = tx.Commit(); err != nil {
 						errCh <- err
 						return
 					}
 				}
 			}(filesystem.File{Path: path, Info: info}, tx, iTx)
 
+			if tx.Err != nil {
+				errCh <- tx.Err
+				return
+			}
 			if iTx == i.txLimit {
 				iTx = 0
 			}
