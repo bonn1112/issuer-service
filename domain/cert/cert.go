@@ -28,11 +28,13 @@ type Tx struct {
 	SqlTx *sql.Tx
 	Mu    sync.Mutex
 	Err   error
+	Done  bool
 }
 
 func (tx *Tx) Commit() error {
 	tx.Mu.Lock()
 	defer tx.Mu.Unlock()
+	tx.Done = true
 	return tx.SqlTx.Commit()
 }
 
@@ -40,5 +42,6 @@ func (tx *Tx) Rollback(err error) {
 	tx.Mu.Lock()
 	tx.SqlTx.Rollback()
 	tx.Err = err
+	tx.Done = true
 	tx.Mu.Unlock()
 }
