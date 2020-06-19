@@ -212,9 +212,17 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 	for {
 		select {
 		case err = <-errCh:
+			if tx != nil && !tx.Done {
+				tx.Rollback(nil)
+			}
 			return err
 
 		case <-doneCh:
+			if tx != nil && !tx.Done {
+				if err = tx.Commit(); err != nil {
+					return err
+				}
+			}
 			if withAuth {
 				return i.storageAdapter.StorePasswordRecords(i.issuerId, i.processId, passwordRecords)
 			}
