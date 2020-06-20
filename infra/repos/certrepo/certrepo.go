@@ -27,7 +27,7 @@ func (r *repo) StartBulkCreation(ctx context.Context) (*cert.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &cert.Tx{SqlTx: tx, Mu: sync.Mutex{}}, nil
+	return &cert.Tx{SqlTx: tx, Mu: sync.Mutex{}, Err: nil, Done: false}, nil
 }
 
 func (r *repo) AppendToBulkCreation(tx *cert.Tx, c *cert.Cert) error {

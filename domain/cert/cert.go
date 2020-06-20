@@ -34,14 +34,21 @@ type Tx struct {
 func (tx *Tx) Commit() error {
 	tx.Mu.Lock()
 	defer tx.Mu.Unlock()
-	tx.Done = true
-	return tx.SqlTx.Commit()
+
+	if tx.Done == false {
+		tx.Done = true
+		return tx.SqlTx.Commit()
+	}
+	return nil
 }
 
 func (tx *Tx) Rollback(err error) {
 	tx.Mu.Lock()
-	tx.SqlTx.Rollback()
+	defer tx.Mu.Unlock()
+
+	if tx.Done == false {
+		tx.Done = true
+		tx.SqlTx.Rollback()
+	}
 	tx.Err = err
-	tx.Done = true
-	tx.Mu.Unlock()
 }
