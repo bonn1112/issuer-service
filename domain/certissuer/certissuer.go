@@ -84,13 +84,13 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 	if !filesystem.FileExists(confPath) {
 		return ErrNoConfig
 	}
-	defer os.Remove(confPath)
+	defer filesystem.Remove(confPath)
 
 	bcProcessDir := path.BlockcertsProcessDir(i.issuerId, i.processId)
 	if !filesystem.FileExists(bcProcessDir) {
 		_ = os.MkdirAll(bcProcessDir, 0755)
 	}
-	defer os.RemoveAll(bcProcessDir)
+	defer filesystem.RemoveAll(bcProcessDir)
 
 	err := i.command.IssueBlockchainCertificate(confPath)
 	if err != nil {
@@ -245,7 +245,7 @@ func (i *certIssuer) storeCert(file filesystem.File, filename string) (err error
 	if err != nil {
 		return
 	}
-	defer os.Remove(pdfPath)
+	defer filesystem.Remove(pdfPath)
 
 	return i.storageAdapter.StoreCertificate(file.Path, i.issuerId, file.Info.Name())
 }

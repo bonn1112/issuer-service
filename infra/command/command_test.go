@@ -2,7 +2,6 @@
 package command_test
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -25,5 +24,5 @@ func TestCommand_HtmlToPdf(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, filesystem.FileExists(pdfFilepath))
 
-	os.Remove(pdfFilepath)
+	filesystem.Remove(pdfFilepath)
 }

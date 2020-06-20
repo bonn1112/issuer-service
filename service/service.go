@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"os"
 
 	"github.com/lastrust/issuing-service/domain/cert"
 	"github.com/lastrust/issuing-service/domain/certissuer"
@@ -13,6 +12,7 @@ import (
 	"github.com/lastrust/issuing-service/protocol"
 	"github.com/lastrust/issuing-service/utils/dicontainer"
 	"github.com/lastrust/issuing-service/utils/env"
+	"github.com/lastrust/issuing-service/utils/filesystem"
 	"github.com/lastrust/issuing-service/utils/path"
 	"github.com/lastrust/utils-go/logging"
 	"golang.org/x/sync/semaphore"
@@ -40,7 +40,7 @@ func (s issuingService) IssueBlockchainCertificate(
 	ctx context.Context,
 	req *protocol.IssueBlockchainCertificateRequest,
 ) (*protocol.IssueBlockchainCertificateReply, error) {
-	defer os.RemoveAll(path.UnsignedCertificatesDir(req.IssuerId, req.ProcessId))
+	defer filesystem.RemoveAll(path.UnsignedCertificatesDir(req.IssuerId, req.ProcessId))
 
 	_, err := s.issuerRepo.FirstByUuid(req.IssuerId)
 	if err != nil {

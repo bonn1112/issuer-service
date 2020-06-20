@@ -1,9 +1,9 @@
 package pdfconv
 
 import (
-	"os"
-
+	"github.com/lastrust/issuing-service/utils/filesystem"
 	"github.com/lastrust/issuing-service/utils/path"
+
 	"github.com/lastrust/utils-go/logging"
 )
 
@@ -37,7 +37,7 @@ func (c *pdfConverter) HtmlToPdf(issuerId, processId, filename string) error {
 		tempHtmlFilepath = path.HtmlTempFilepath(issuerId, filename)
 		pdfFilepath      = path.PdfFilepath(issuerId, filename)
 	)
-	defer os.Remove(tempHtmlFilepath)
+	defer filesystem.Remove(tempHtmlFilepath)
 
 	html, err := c.htmltopdf.ParseUnsignedCertificate(certificatePath)
 	if err != nil {
