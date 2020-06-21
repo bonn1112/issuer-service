@@ -18,7 +18,7 @@ func Remove(fp string) error {
 		logging.Err().Errorf("Failed to remove a file: %s %v\n", fp, err)
 		return err
 	} else {
-		logging.Out().Infof("Removed a file: %s\n", fp)
+		logging.Out().Debugf("Removed a file: %s\n", fp)
 		return nil
 	}
 }
@@ -28,7 +28,7 @@ func RemoveAll(dir string) error {
 		logging.Err().Errorf("Failed to remove all files in a directory: %s %v\n", dir, err)
 		return err
 	} else {
-		logging.Out().Infof("Removed all files in a directory: %s\n", dir)
+		logging.Out().Debugf("Removed all files in a directory: %s\n", dir)
 		return nil
 	}
 }
@@ -38,7 +38,7 @@ func Move(old, new string) error {
 		logging.Err().Errorf("Failed to remove a file from: %s to: %s %v\n", old, new, err)
 		return err
 	} else {
-		logging.Out().Infof("Moved a file from: %s to: %s\n", old, new)
+		logging.Out().Debugf("Moved a file from: %s to: %s\n", old, new)
 		return nil
 	}
 }
