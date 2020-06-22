@@ -47,6 +47,7 @@ type (
 type certIssuer struct {
 	issuerId       string
 	processId      string
+	groupId        int32
 	storageAdapter StorageAdapter
 	command        Command
 	pdfConverter   pdfconv.PdfConverter
@@ -58,7 +59,7 @@ type certIssuer struct {
 
 // New a certIssuer constructor
 func New(
-	issuerId, processId string,
+	issuerId, processId string, groupId int32,
 	storageAdapter StorageAdapter,
 	command Command,
 	pdfConverter pdfconv.PdfConverter,
@@ -69,6 +70,7 @@ func New(
 	return &certIssuer{
 		issuerId:       issuerId,
 		processId:      processId,
+		groupId:        groupId,
 		storageAdapter: storageAdapter,
 		command:        command,
 		pdfConverter:   pdfConverter,
@@ -80,13 +82,13 @@ func New(
 }
 
 func (i *certIssuer) IssueCertificate(ctx context.Context) error {
-	confPath := path.IssuerConfigPath(i.issuerId, i.processId)
+	confPath := path.IssuerConfigPath(i.issuerId, i.processId, i.groupId)
 	if !filesystem.FileExists(confPath) {
 		return ErrNoConfig
 	}
 	defer filesystem.Remove(confPath)
 
-	bcProcessDir := path.BlockcertsProcessDir(i.issuerId, i.processId)
+	bcProcessDir := path.BlockcertsProcessDir(i.issuerId, i.processId, i.groupId)
 	if !filesystem.FileExists(bcProcessDir) {
 		_ = os.MkdirAll(bcProcessDir, 0755)
 	}
@@ -236,7 +238,7 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 }
 
 func (i *certIssuer) storeCert(file filesystem.File, filename string) (err error) {
-	if err = i.pdfConverter.HtmlToPdf(i.issuerId, i.processId, filename); err != nil {
+	if err = i.pdfConverter.HtmlToPdf(i.issuerId, i.processId, i.groupId, filename); err != nil {
 		return
 	}
 

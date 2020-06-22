@@ -9,7 +9,7 @@ import (
 
 type (
 	PdfConverter interface {
-		HtmlToPdf(issuer, processId, filename string) error
+		HtmlToPdf(issuer, processId string, groupId int32, filename string) error
 	}
 
 	Command interface {
@@ -31,9 +31,9 @@ func New(htmltopdf HtmlToPdf) PdfConverter {
 	return &pdfConverter{htmltopdf}
 }
 
-func (c *pdfConverter) HtmlToPdf(issuerId, processId, filename string) error {
+func (c *pdfConverter) HtmlToPdf(issuerId, processId string, groupId int32, filename string) error {
 	var (
-		certificatePath  = path.UnsignedCertificateFilepath(issuerId, processId, filename)
+		certificatePath  = path.UnsignedCertificateFilepath(issuerId, processId, groupId, filename)
 		tempHtmlFilepath = path.HtmlTempFilepath(issuerId, filename)
 		pdfFilepath      = path.PdfFilepath(issuerId, filename)
 	)

@@ -40,7 +40,7 @@ func (s issuingService) IssueBlockchainCertificate(
 	ctx context.Context,
 	req *protocol.IssueBlockchainCertificateRequest,
 ) (*protocol.IssueBlockchainCertificateReply, error) {
-	defer filesystem.RemoveAll(path.UnsignedCertificatesDir(req.IssuerId, req.ProcessId))
+	defer filesystem.RemoveAll(path.UnsignedCertificatesDir(req.IssuerId, req.ProcessId, req.GroupId))
 
 	_, err := s.issuerRepo.FirstByUuid(req.IssuerId)
 	if err != nil {
@@ -58,7 +58,7 @@ func (s issuingService) IssueBlockchainCertificate(
 	pdfConverter := pdfconv.New(htmltopdf.New(cmd))
 
 	ci := certissuer.New(
-		req.IssuerId, req.ProcessId,
+		req.IssuerId, req.ProcessId, req.GroupId,
 		storageAdapter,
 		cmd,
 		pdfConverter,
