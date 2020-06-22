@@ -127,7 +127,11 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 	)
 
 	go func() {
-		filepath.Walk(bcProcessDir, func(path string, info os.FileInfo, _ error) (err error) {
+		filepath.Walk(bcProcessDir, func(path string, info os.FileInfo, walkErr error) (err error) {
+			if walkErr != nil {
+				return walkErr
+			}
+
 			if info.IsDir() {
 				return nil
 			}
@@ -212,13 +216,13 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 	for {
 		select {
 		case err = <-errCh:
-			if tx != nil && !tx.Done {
+			if tx != nil {
 				tx.Rollback(nil)
 			}
 			return err
 
 		case <-doneCh:
-			if tx != nil && !tx.Done {
+			if tx != nil {
 				if err = tx.Commit(); err != nil {
 					return err
 				}

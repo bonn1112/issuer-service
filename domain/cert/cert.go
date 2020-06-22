@@ -35,7 +35,7 @@ func (tx *Tx) Commit() error {
 	tx.Mu.Lock()
 	defer tx.Mu.Unlock()
 
-	if tx.Done == false {
+	if !tx.Done {
 		tx.Done = true
 		return tx.SqlTx.Commit()
 	}
@@ -46,7 +46,7 @@ func (tx *Tx) Rollback(err error) {
 	tx.Mu.Lock()
 	defer tx.Mu.Unlock()
 
-	if tx.Done == false {
+	if !tx.Done {
 		tx.Done = true
 		tx.SqlTx.Rollback()
 	}
