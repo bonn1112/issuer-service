@@ -37,3 +37,9 @@ func (r *repo) AppendToBulkCreation(tx *cert.Tx, c *cert.Cert) error {
 	tx.Mu.Unlock()
 	return err
 }
+
+func (r *repo) Create(c *cert.Cert) error {
+	_, err := r.db.Exec(queryCreate,
+		c.Uuid, c.Password, c.AuthorizeRequired, c.IssuerId, c.IssuingProcessId)
+	return err
+}

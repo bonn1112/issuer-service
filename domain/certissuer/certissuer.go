@@ -100,7 +100,7 @@ func (i *certIssuer) IssueCertificate(ctx context.Context) error {
 	}
 
 	// TODO: specify the uuid, now it's hardcode :(
-	if err = i.storeAllCerts(ctx, bcProcessDir, i.issuerId == orixUuid); err != nil {
+	if err = i.storeAllCerts(context.Background(), bcProcessDir, i.issuerId == orixUuid); err != nil {
 		return fmt.Errorf("failed certIssuer.storeAllCerts, %v", err)
 	}
 	return nil
@@ -110,26 +110,19 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 	var (
 		doneCh = make(chan bool)
 		errCh  = make(chan error)
-	)
 
-	var (
 		seededRand      *rand.Rand
 		passwordRecords = [][]string{
 			{"cert_id", "raw_password"},
 		}
 	)
+
 	if withAuth {
 		seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	}
 
-	var (
-		tx  *cert.Tx
-		iTx int
-		err error
-	)
-
 	go func() {
-		filepath.Walk(bcProcessDir, func(path string, info os.FileInfo, walkErr error) (err error) {
+		filepath.Walk(bcProcessDir, func(path string, info os.FileInfo, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
@@ -138,31 +131,19 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 				return nil
 			}
 
-			if iTx == 0 {
-				tx, err = i.certRepo.StartBulkCreation(ctx)
-				if err != nil {
-					errCh <- err
-					return
-				}
-			}
-			iTx++
-
 			i.wg.Add(1)
 			i.semaphore.Acquire(ctx, 1)
-			go func(file filesystem.File, tx *cert.Tx, iTx int) {
+			go func(file filesystem.File) {
 				defer func() {
 					i.wg.Done()
 					i.semaphore.Release(1)
 				}()
 
-				var (
-					hashedPassword []byte
-					err            error
-				)
+				var hashedPassword []byte
+				var err error
 
 				filename := filesystem.TrimExt(file.Info.Name())
 				if err = i.storeCert(file, filename); err != nil {
-					tx.Rollback(err)
 					errCh <- err
 					return
 				}
@@ -175,7 +156,6 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 
 					hashedPassword, err = bcrypt.GenerateFromPassword([]byte(password), 10)
 					if err != nil {
-						tx.Rollback(err)
 						errCh <- err
 						return
 					}
@@ -188,28 +168,14 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 					IssuerId:          i.issuerId,
 					IssuingProcessId:  i.processId,
 				}
-				if err = i.certRepo.AppendToBulkCreation(tx, c); err != nil {
-					tx.Rollback(err)
+				// TODO: tmp solution, rewrite to transactions
+				if err = i.certRepo.Create(c); err != nil {
 					errCh <- err
 					return
 				}
 
-				if iTx == i.txLimit {
-					if err = tx.Commit(); err != nil {
-						errCh <- err
-						return
-					}
-				}
-			}(filesystem.File{Path: path, Info: info}, tx, iTx)
-
-			if tx.Err != nil {
-				errCh <- tx.Err
-				return
-			}
-			if iTx == i.txLimit {
-				iTx = 0
-			}
-			return
+			}(filesystem.File{Path: path, Info: info})
+			return nil
 		})
 		i.wg.Wait()
 		close(doneCh)
@@ -217,18 +183,10 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 
 	for {
 		select {
-		case err = <-errCh:
-			if tx != nil {
-				tx.Rollback(nil)
-			}
+		case err := <-errCh:
 			return err
 
 		case <-doneCh:
-			if tx != nil {
-				if err = tx.Commit(); err != nil {
-					return err
-				}
-			}
 			if withAuth {
 				return i.storageAdapter.StorePasswordRecords(i.issuerId, i.processId, passwordRecords)
 			}
