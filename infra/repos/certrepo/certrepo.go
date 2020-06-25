@@ -27,7 +27,7 @@ func (r *repo) StartBulkCreation(ctx context.Context) (*cert.Tx, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &cert.Tx{SqlTx: tx, Mu: sync.Mutex{}}, nil
+	return &cert.Tx{SqlTx: tx, Mu: sync.Mutex{}, Done: false}, nil
 }
 
 func (r *repo) AppendToBulkCreation(tx *cert.Tx, c *cert.Cert) error {
@@ -35,5 +35,11 @@ func (r *repo) AppendToBulkCreation(tx *cert.Tx, c *cert.Cert) error {
 	_, err := tx.SqlTx.Exec(queryCreate,
 		c.Uuid, c.Password, c.AuthorizeRequired, c.IssuerId, c.IssuingProcessId)
 	tx.Mu.Unlock()
+	return err
+}
+
+func (r *repo) Create(c *cert.Cert) error {
+	_, err := r.db.Exec(queryCreate,
+		c.Uuid, c.Password, c.AuthorizeRequired, c.IssuerId, c.IssuingProcessId)
 	return err
 }

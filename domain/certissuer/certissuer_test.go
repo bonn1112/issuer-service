@@ -51,7 +51,7 @@ var _ = Describe("Certissuer.IssueCertificate", func() {
 
 		ci := certissuer.New(issuerId, processId, nil, mockedCommand, nil, mockedCertRepo)
 		err := ci.IssueCertificate(context.Background())
-		defer os.RemoveAll(path.BlockcertsProcessDir(issuerId, processId))
+		defer filesystem.RemoveAll(path.BlockcertsProcessDir(issuerId, processId))
 
 		It("got an nil error", func() {
 			Expect(err).To(BeNil())

@@ -8,8 +8,9 @@ func SetDataDir(gotDataDir string) {
 	dataDir = gotDataDir
 }
 
-func IssuerConfigPath(issuerId, processId string) string {
-	return fmt.Sprintf("%s%s/issuer-configs/%s.ini", dataDir, issuerId, processId)
+func IssuerConfigPath(issuerId, processId string, groupId int32) string {
+	return fmt.Sprintf("%s%s/issuer-configs/%s/%d.ini",
+		dataDir, issuerId, processId, groupId)
 }
 
 func HtmlTempFilepath(issuerId, certId string) string {
@@ -20,16 +21,18 @@ func PdfFilepath(issuerId, certId string) string {
 	return fmt.Sprintf("%s%s/pdf/%s.pdf", dataDir, issuerId, certId)
 }
 
-func UnsignedCertificatesDir(issuerId, processId string) string {
-	return fmt.Sprintf("%s%s/unsigned_certificates/%s/", dataDir, issuerId, processId)
+func UnsignedCertificatesDir(issuerId, processId string, groupId int32) string {
+	return fmt.Sprintf("%s%s/unsigned_certificates/%s/%d/",
+		dataDir, issuerId, processId, groupId)
 }
 
-func UnsignedCertificateFilepath(issuerId, processId, certId string) string {
-	return fmt.Sprintf("%s%s.json", UnsignedCertificatesDir(issuerId, processId), certId)
+func UnsignedCertificateFilepath(issuerId, processId string, groupId int32, certId string) string {
+	return fmt.Sprintf("%s%s.json", UnsignedCertificatesDir(issuerId, processId, groupId), certId)
 }
 
-func BlockcertsProcessDir(issuerId, processId string) string {
-	return fmt.Sprintf("%s%s/blockchain_certificates/%s/", dataDir, issuerId, processId)
+func BlockcertsProcessDir(issuerId, processId string, groupId int32) string {
+	return fmt.Sprintf("%s%s/blockchain_certificates/%s/%d/",
+		dataDir, issuerId, processId, groupId)
 }
 
 func CertsPathInGCS(issuerId, certId string) string {

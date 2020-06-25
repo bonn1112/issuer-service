@@ -22,6 +22,7 @@ type Cert struct {
 type Repository interface {
 	StartBulkCreation(ctx context.Context) (*Tx, error)
 	AppendToBulkCreation(tx *Tx, c *Cert) error
+	Create(c *Cert) error
 }
 
 type Tx struct {
@@ -34,14 +35,28 @@ type Tx struct {
 func (tx *Tx) Commit() error {
 	tx.Mu.Lock()
 	defer tx.Mu.Unlock()
+
+	if tx.Done {
+		return nil
+	}
+
 	tx.Done = true
-	return tx.SqlTx.Commit()
+	if err := tx.SqlTx.Commit(); err == sql.ErrTxDone {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (tx *Tx) Rollback(err error) {
 	tx.Mu.Lock()
-	tx.SqlTx.Rollback()
+	defer tx.Mu.Unlock()
+
 	tx.Err = err
+	if tx.Done {
+		return
+	}
+
 	tx.Done = true
-	tx.Mu.Unlock()
+	tx.SqlTx.Rollback()
 }

@@ -51,7 +51,7 @@ var _ = Describe("HtmlToPDF.CreateTempHtmlTemplate", func() {
 		htmlFilepath, _ := filepath.Abs("../../test/htmltopdf_CreateTempHtmlTemplate.html")
 		AfterEach(func() {
 			htmltopdf.LayoutFilepath = "static/layout.html"
-			os.Remove(htmlFilepath)
+			filesystem.Remove(htmlFilepath)
 		})
 
 		h2p := htmltopdf.New(nil)

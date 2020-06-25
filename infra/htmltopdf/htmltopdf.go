@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"os"
+	"sync"
 
 	"github.com/lastrust/issuing-service/domain/pdfconv"
 )
@@ -22,6 +23,7 @@ var LayoutFilepath = "static/layout.html"
 type HtmlToPdf struct {
 	Command     pdfconv.Command
 	Certificate map[string]interface{}
+	sync.RWMutex
 }
 
 func New(command pdfconv.Command) *HtmlToPdf {
@@ -41,15 +43,19 @@ func (h2p *HtmlToPdf) ParseUnsignedCertificate(certPath string) (html interface{
 		return
 	}
 
+	h2p.Lock()
 	err = json.Unmarshal(certContent, &h2p.Certificate)
 	if err != nil {
 		return
 	}
+	h2p.Unlock()
 
+	h2p.RLock()
 	html, ok := h2p.Certificate["displayHtml"]
 	if !ok {
 		return nil, ErrDisplayHTMLNotFound
 	}
+	h2p.RUnlock()
 
 	return html, nil
 }

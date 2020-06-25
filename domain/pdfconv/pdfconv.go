@@ -1,15 +1,15 @@
 package pdfconv
 
 import (
-	"os"
-
+	"github.com/lastrust/issuing-service/utils/filesystem"
 	"github.com/lastrust/issuing-service/utils/path"
+
 	"github.com/lastrust/utils-go/logging"
 )
 
 type (
 	PdfConverter interface {
-		HtmlToPdf(issuer, processId, filename string) error
+		HtmlToPdf(issuer, processId string, groupId int32, filename string) error
 	}
 
 	Command interface {
@@ -31,13 +31,13 @@ func New(htmltopdf HtmlToPdf) PdfConverter {
 	return &pdfConverter{htmltopdf}
 }
 
-func (c *pdfConverter) HtmlToPdf(issuerId, processId, filename string) error {
+func (c *pdfConverter) HtmlToPdf(issuerId, processId string, groupId int32, filename string) error {
 	var (
-		certificatePath  = path.UnsignedCertificateFilepath(issuerId, processId, filename)
+		certificatePath  = path.UnsignedCertificateFilepath(issuerId, processId, groupId, filename)
 		tempHtmlFilepath = path.HtmlTempFilepath(issuerId, filename)
 		pdfFilepath      = path.PdfFilepath(issuerId, filename)
 	)
-	defer os.Remove(tempHtmlFilepath)
+	defer filesystem.Remove(tempHtmlFilepath)
 
 	html, err := c.htmltopdf.ParseUnsignedCertificate(certificatePath)
 	if err != nil {
