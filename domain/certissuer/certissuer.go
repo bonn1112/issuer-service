@@ -122,7 +122,7 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 	}
 
 	go func() {
-		filepath.Walk(bcProcessDir, func(path string, info os.FileInfo, walkErr error) error {
+		err := filepath.Walk(bcProcessDir, func(path string, info os.FileInfo, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
@@ -177,6 +177,9 @@ func (i *certIssuer) storeAllCerts(ctx context.Context, bcProcessDir string, wit
 			}(filesystem.File{Path: path, Info: info})
 			return nil
 		})
+		if err != nil {
+			errCh <- err
+		}
 		i.wg.Wait()
 		close(doneCh)
 	}()
